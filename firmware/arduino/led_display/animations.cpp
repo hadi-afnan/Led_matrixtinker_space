@@ -133,19 +133,19 @@ void AnimationEngine::renderFire() {
         }
     }
 
-    // Step 2: Heat drifts upward from bottom
-    for (int y = 0; y < DISPLAY_HEIGHT - 1; y++) {
+    // Step 2: Heat drifts upward from bottom (y=0) towards top (y=DISPLAY_HEIGHT-1)
+    for (int y = DISPLAY_HEIGHT - 1; y > 0; y--) {
         for (int x = 0; x < DISPLAY_WIDTH; x++) {
             int left = (x > 0) ? x - 1 : 0;
             int right = (x < DISPLAY_WIDTH - 1) ? x + 1 : DISPLAY_WIDTH - 1;
-            _heatMap[x][y] = (_heatMap[left][y + 1] + _heatMap[x][y + 1] + _heatMap[right][y + 1]) / 3;
+            _heatMap[x][y] = (_heatMap[left][y - 1] + _heatMap[x][y - 1] + _heatMap[right][y - 1]) / 3;
         }
     }
 
-    // Step 3: Randomly ignite new sparks at bottom rows
+    // Step 3: Randomly ignite new sparks at bottom row (y = 0)
     for (int x = 0; x < DISPLAY_WIDTH; x++) {
         if (random8() < 140) {
-            _heatMap[x][DISPLAY_HEIGHT - 1] = qadd8(_heatMap[x][DISPLAY_HEIGHT - 1], random8(160, 255));
+            _heatMap[x][0] = qadd8(_heatMap[x][0], random8(160, 255));
         }
     }
 
@@ -211,8 +211,8 @@ void AnimationEngine::renderMeteor() {
         }
     }
 
-    // Draw active meteors
-    int meteorY = _stepCounter % (DISPLAY_HEIGHT + 10);
+    // Draw active meteors falling from top (sky) to bottom (ground)
+    int meteorY = (DISPLAY_HEIGHT + 10) - (_stepCounter % (DISPLAY_HEIGHT + 10));
     int meteorX = (_stepCounter / 2) % DISPLAY_WIDTH;
 
     for (int k = 0; k < 3; k++) {
@@ -220,7 +220,7 @@ void AnimationEngine::renderMeteor() {
         int yPos = meteorY - (k * 4);
         if (yPos >= 0 && yPos < DISPLAY_HEIGHT) {
             _display.setPixel(xPos, yPos, CRGB::White);
-            if (yPos > 0) _display.setPixel(xPos, yPos - 1, CRGB(100, 180, 255));
+            if (yPos + 1 < DISPLAY_HEIGHT) _display.setPixel(xPos, yPos + 1, CRGB(100, 180, 255));
         }
     }
 }

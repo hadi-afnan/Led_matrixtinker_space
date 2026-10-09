@@ -177,7 +177,7 @@ void DisplayMapping::drawRect(int x, int y, int w, int h, CRGB color, bool fille
     }
 }
 
-void DisplayMapping::drawChar(int x, int y, char c, CRGB color) {
+void DisplayMapping::drawChar(int x, int y, char c, CRGB color, int scale) {
     if (c < 32 || c > 126) return;
     int charIndex = c - 32;
 
@@ -185,8 +185,17 @@ void DisplayMapping::drawChar(int x, int y, char c, CRGB color) {
         uint8_t line = pgm_read_byte(&(FONT_5X7[charIndex][col]));
         for (int row = 0; row < 7; row++) {
             if (line & (1 << row)) {
-                // With bottom-to-top coordinates, row 0 is top of character (y + 6)
-                setPixel(x + col, y + (6 - row), color);
+                int px = x + col * scale;
+                int py = y + (6 - row) * scale;
+                if (scale <= 1) {
+                    setPixel(px, py, color);
+                } else {
+                    for (int dx = 0; dx < scale; dx++) {
+                        for (int dy = 0; dy < scale; dy++) {
+                            setPixel(px + dx, py + dy, color);
+                        }
+                    }
+                }
             }
         }
     }

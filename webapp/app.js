@@ -224,6 +224,7 @@ function initGlobalControls() {
   const btnPower = document.getElementById('btn-power');
   const btnClear = document.getElementById('btn-clear-matrix');
   const btnSync = document.getElementById('btn-sync-preview');
+  const btnCornerTest = document.getElementById('btn-corner-test');
 
   bSlider.addEventListener('input', (e) => {
     state.brightness = parseInt(e.target.value);
@@ -248,6 +249,25 @@ function initGlobalControls() {
     showToast('Display Cleared');
     sendApi('/api/clear', {});
   });
+
+  if (btnCornerTest) {
+    btnCornerTest.addEventListener('click', () => {
+      clearMatrix();
+      // BL (0, 0): Red (255, 0, 0)
+      setPixel(0, 0, 255, 0, 0);
+      // BR (49, 0): Green (0, 255, 0)
+      setPixel(MATRIX_WIDTH - 1, 0, 0, 255, 0);
+      // TR (49, 29): White (255, 255, 255)
+      setPixel(MATRIX_WIDTH - 1, MATRIX_HEIGHT - 1, 255, 255, 255);
+      // TL (0, 29): Blue (0, 0, 255)
+      setPixel(0, MATRIX_HEIGHT - 1, 0, 0, 255);
+
+      renderMatrixCanvas();
+      renderPaintCanvas();
+      sendImagePayload();
+      showToast('Corner test: BL=Red, BR=Green, TR=White, TL=Blue');
+    });
+  }
 
   btnSync.addEventListener('click', () => {
     fetch('/api/frame')
@@ -342,10 +362,10 @@ function renderMatrixCanvas() {
 
   let totalR = 0, totalG = 0, totalB = 0;
 
-  for (let y = 0; y < MATRIX_HEIGHT; y++) {
+    for (let y = 0; y < MATRIX_HEIGHT; y++) {
     for (let x = 0; x < MATRIX_WIDTH; x++) {
       const cx = x * stepX + stepX / 2;
-      const cy = y * stepY + stepY / 2;
+      const cy = (MATRIX_HEIGHT - 1 - y) * stepY + stepY / 2;
 
       let [r, g, b] = getPixel(x, y);
 
@@ -412,14 +432,16 @@ function drawChar(startX, startY, char, r, g, b, scale = 1) {
     const colByte = fontData[col];
     for (let row = 0; row < 7; row++) {
       if ((colByte & (1 << row)) !== 0) {
+        const px = startX + col * scale;
+        const py = startY + (6 - row) * scale;
         if (scale === 1) {
-          setPixel(startX + col, startY + row, r, g, b);
-        } else if (scale === 2) {
-          // 2x Scaled Header Font
-          setPixel(startX + col * 2, startY + row * 2, r, g, b);
-          setPixel(startX + col * 2 + 1, startY + row * 2, r, g, b);
-          setPixel(startX + col * 2, startY + row * 2 + 1, r, g, b);
-          setPixel(startX + col * 2 + 1, startY + row * 2 + 1, r, g, b);
+          setPixel(px, py, r, g, b);
+        } else {
+          for (let dx = 0; dx < scale; dx++) {
+            for (let dy = 0; dy < scale; dy++) {
+              setPixel(px + dx, py + dy, r, g, b);
+            }
+          }
         }
       }
     }
@@ -518,7 +540,7 @@ function drawBadgeIcon(iconName, x = 1, y = 10) {
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (grid[r][c]) {
-        setPixel(x + c, y + r, 56, 189, 248);
+        setPixel(x + c, y + (7 - r), 56, 189, 248);
       }
     }
   }
@@ -536,20 +558,23 @@ function renderTextToMatrix(scrollX = 0) {
   const c3 = document.getElementById('color-line3').value;
 
   if (state.textLayout === '3line') {
-    // 3 Crisp Lines spaced over 30 rows
-    if (l1) drawLineText(2, l1, c1, state.textAlign, 1, scrollX);
+    // In bottom-left coordinates:
+    // Line 1 (Top header) at y = 21 (rows 21..27)
+    // Line 2 (Middle)     at y = 11 (rows 11..17)
+    // Line 3 (Bottom)     at y = 2  (rows 2..8)
+    if (l1) drawLineText(21, l1, c1, state.textAlign, 1, scrollX);
     if (l2) drawLineText(11, l2, c2, state.textAlign, 1, scrollX);
-    if (l3) drawLineText(20, l3, c3, state.textAlign, 1, scrollX);
+    if (l3) drawLineText(2,  l3, c3, state.textAlign, 1, scrollX);
   } else if (state.textLayout === 'bigheader') {
-    // 2x Scaled Header + 1x Subtitle
-    if (l1) drawLineText(2, l1, c1, state.textAlign, 2, scrollX);
-    if (l2) drawLineText(19, l2, c2, state.textAlign, 1, scrollX);
+    // 2x Scaled Header on top (y = 14) + 1x Subtitle on bottom (y = 3)
+    if (l1) drawLineText(14, l1, c1, state.textAlign, 2, scrollX);
+    if (l2) drawLineText(3,  l2, c2, state.textAlign, 1, scrollX);
   } else if (state.textLayout === 'badge') {
-    // Left Badge Icon + Right 2 Lines
+    // Left Badge Icon at y = 11 + Line 1 at y = 17, Line 2 at y = 6
     const iconName = document.getElementById('select-badge-icon').value;
     drawBadgeIcon(iconName, 2, 11);
-    if (l1) drawLineText(6, l1, c1, 'left', 1, 13);
-    if (l2) drawLineText(16, l2, c2, 'left', 1, 13);
+    if (l1) drawLineText(17, l1, c1, 'left', 1, 14);
+    if (l2) drawLineText(6,  l2, c2, 'left', 1, 14);
   } else if (state.textLayout === 'marquee') {
     // Single Large Scrolling Banner
     const fullMsg = [l1, l2, l3].filter(Boolean).join(' • ');
@@ -812,11 +837,12 @@ function renderImageToMatrix(img) {
     applyFloydSteinbergDither(d, MATRIX_WIDTH, MATRIX_HEIGHT);
   }
 
-  // Copy to state.pixels
-  for (let y = 0; y < MATRIX_HEIGHT; y++) {
-    for (let x = 0; x < MATRIX_WIDTH; x++) {
-      const srcIdx = (y * MATRIX_WIDTH + x) * 4;
-      setPixel(x, y, d[srcIdx], d[srcIdx + 1], d[srcIdx + 2]);
+  // Copy to state.pixels (mapping canvas top-to-bottom to logical bottom-to-top)
+  for (let cy = 0; cy < MATRIX_HEIGHT; cy++) {
+    const ly = MATRIX_HEIGHT - 1 - cy;
+    for (let cx = 0; cx < MATRIX_WIDTH; cx++) {
+      const srcIdx = (cy * MATRIX_WIDTH + cx) * 4;
+      setPixel(cx, ly, d[srcIdx], d[srcIdx + 1], d[srcIdx + 2]);
     }
   }
 
@@ -957,7 +983,8 @@ function getCanvasCoordinates(e) {
   const clientX = e.clientX;
   const clientY = e.clientY;
   const x = Math.floor(((clientX - rect.left) / rect.width) * MATRIX_WIDTH);
-  const y = Math.floor(((clientY - rect.top) / rect.height) * MATRIX_HEIGHT);
+  const canvasY = Math.floor(((clientY - rect.top) / rect.height) * MATRIX_HEIGHT);
+  const y = (MATRIX_HEIGHT - 1) - canvasY;
   return {
     x: Math.max(0, Math.min(MATRIX_WIDTH - 1, x)),
     y: Math.max(0, Math.min(MATRIX_HEIGHT - 1, y))
@@ -1017,11 +1044,16 @@ function renderPaintCanvas() {
   const imgData = paintCtx.createImageData(MATRIX_WIDTH, MATRIX_HEIGHT);
   const d = imgData.data;
 
-  for (let i = 0; i < TOTAL_LEDS; i++) {
-    d[i * 4] = state.pixels[i * 3];
-    d[i * 4 + 1] = state.pixels[i * 3 + 1];
-    d[i * 4 + 2] = state.pixels[i * 3 + 2];
-    d[i * 4 + 3] = 255;
+  for (let cy = 0; cy < MATRIX_HEIGHT; cy++) {
+    const ly = MATRIX_HEIGHT - 1 - cy;
+    for (let cx = 0; cx < MATRIX_WIDTH; cx++) {
+      const canvasIdx = (cy * MATRIX_WIDTH + cx) * 4;
+      const [r, g, b] = getPixel(cx, ly);
+      d[canvasIdx]     = r;
+      d[canvasIdx + 1] = g;
+      d[canvasIdx + 2] = b;
+      d[canvasIdx + 3] = 255;
+    }
   }
 
   paintCtx.putImageData(imgData, 0, 0);

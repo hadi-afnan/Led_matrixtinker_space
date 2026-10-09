@@ -77,16 +77,7 @@ void TextRenderer::drawLine(int y, const String& text, CRGB color, int scale, in
     int cursorX = startX;
     for (size_t i = 0; i < text.length(); i++) {
         char c = text[i];
-        if (scale == 1) {
-            _display.drawChar(cursorX, y, c, color);
-        } else if (scale == 2) {
-            // 2x Scaled Header Font
-            for (int dx = 0; dx < 2; dx++) {
-                for (int dy = 0; dy < 2; dy++) {
-                    _display.drawChar(cursorX + dx, y + dy, c, color);
-                }
-            }
-        }
+        _display.drawChar(cursorX, y, c, color, scale);
         cursorX += charWidth;
     }
 }
@@ -113,27 +104,36 @@ void TextRenderer::drawBadgeIcon(const String& icon, int x, int y) {
         uint8_t rowByte = pgm_read_byte(p + r);
         for (int c = 0; c < 8; c++) {
             if (rowByte & (1 << (7 - c))) {
-                _display.setPixel(x + c, y + r, iconColor);
+                _display.setPixel(x + c, y + (7 - r), iconColor);
             }
         }
     }
 }
 
 void TextRenderer::render3Line() {
-    drawLine(2, _line1, _color1, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
+    // In bottom-left coordinate system:
+    // Line 1 (Top header)    at y = 21 (rows 21..27)
+    // Line 2 (Middle status) at y = 11 (rows 11..17)
+    // Line 3 (Bottom callout)at y = 2  (rows 2..8)
+    drawLine(21, _line1, _color1, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
     drawLine(11, _line2, _color2, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
-    drawLine(20, _line3, _color3, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
+    drawLine(2,  _line3, _color3, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
 }
 
 void TextRenderer::renderBigHeader() {
-    drawLine(2, _line1, _color1, 2, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
-    drawLine(19, _line2, _color2, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
+    // Big 2x Header on top (y = 14 occupies rows 14..27)
+    // Subtitle on bottom (y = 3 occupies rows 3..9)
+    drawLine(14, _line1, _color1, 2, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
+    drawLine(3,  _line2, _color2, 1, (_effect == EFFECT_SCROLL ? _scrollOffset : 0));
 }
 
 void TextRenderer::renderBadge() {
+    // Left badge icon centered at y = 11 (rows 11..18)
+    // Line 1 on top right (y = 17)
+    // Line 2 on bottom right (y = 6)
     drawBadgeIcon(_badgeIcon, 2, 11);
-    drawLine(6, _line1, _color1, 1, 14);
-    drawLine(16, _line2, _color2, 1, 14);
+    drawLine(17, _line1, _color1, 1, 14);
+    drawLine(6,  _line2, _color2, 1, 14);
 }
 
 void TextRenderer::renderMarquee() {

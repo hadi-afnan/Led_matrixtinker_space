@@ -51,9 +51,9 @@ public:
     void drawRect(int x, int y, int w, int h, CRGB color, bool filled = false);
 
     /**
-     * @brief Draws a single ASCII character using a 5x7 font.
+     * @brief Draws a single ASCII character using a 5x7 font with optional integer scaling.
      */
-    void drawChar(int x, int y, char c, CRGB color);
+    void drawChar(int x, int y, char c, CRGB color, int scale = 1);
 
     /**
      * @brief Renders a text string.
