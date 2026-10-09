@@ -76,6 +76,13 @@ Adjust current limits to match your power wiring safety profile:
 #define CURRENT_LIMIT_MA    25000   // FastLED dynamic limiter: 25 A (125 W)
 ```
 
+### Wi-Fi Configuration
+```cpp
+#define WIFI_AP_SSID        "TinkerSpace-LED" // Access point name for direct phone connection
+#define WIFI_AP_PASSWORD    ""                // Open AP by default
+#define MDNS_HOSTNAME       "tinkerspace"     // Accessible at http://tinkerspace.local
+```
+
 ---
 
 ## 5. Compiling and Flashing
@@ -87,18 +94,50 @@ Adjust current limits to match your power wiring safety profile:
 
 ---
 
-## 6. Serial Monitor Diagnostics
+## 6. Accessing the Web Application
+
+Once flashed, the ESP32-S3 automatically spins up an Access Point and web server:
+
+### Connecting from Phone, Tablet, or PC
+1. On your device, look for the Wi-Fi network named **`TinkerSpace-LED`** and connect (no password needed by default).
+2. Open your web browser and navigate to:
+   ```text
+   http://192.168.4.1
+   ```
+   Or if connected to the same local network:
+   ```text
+   http://tinkerspace.local
+   ```
+3. The responsive **TinkerSpace LED Web Controller** loads immediately!
+
+### Key Web App Features
+- **Space Signs & Multi-Line Text**: Display 3 distinct lines of text, big headers, or status badges with custom colors, alignments, and scrolling/blinking effects.
+- **Quick Space Presets**: 1-click makerspace actions ("SPACE IS OPEN", "WORKSHOP IN PROGRESS", "3D PRINTERS ACTIVE", "LASER CUTTER BUSY", "COFFEE BREAK", "PIZZA TIME").
+- **Image Studio**: Upload any image or logo; auto-downsampled and Floyd-Steinberg dithered for 50×30 pixels.
+- **Pixel Art Studio**: Draw pixel-by-pixel with pencil, eraser, and paint bucket with live sync.
+- **Animations**: Generative WLED-style patterns (Fire, Plasma, Meteor, Rainbow, Matrix Rain).
+
+---
+
+## 7. Serial Monitor Diagnostics
 
 Open the Arduino Serial Monitor (**Tools** > **Serial Monitor**) set to **115200 baud**. Upon boot, the firmware outputs:
 
 ```text
-========================================
- TinkerSpace Modular LED Display v1.0
-========================================
-Layout: 5x3 Grid (50x30 = 1500 LEDs)
-Data Pin: GPIO 4
-Button 1 (Next): GPIO 14
-Button 2 (Pause): GPIO 15
-FastLED Power Limit: 25000 mA @ 5V
-System Initialized. Starting Animation 0: Rainbow Wave
+==================================================
+   TINKERSPACE MODULAR LED DISPLAY CONTROLLER     
+==================================================
+Layout Configured : 5x3 Prototype (50x30)
+Grid Resolution   : 50 x 30
+Total LED Count   : 1500
+Data Output Pin   : GPIO 4
+Button 1 (Next)   : GPIO 14
+Button 2 (Pause)  : GPIO 15
+Power Safety Cap  : 25000 mA @ 5 V
+--------------------------------------------------
+Web App URL (Access Point) : http://192.168.4.1
+Web App URL (Local Network): http://tinkerspace.local
+--------------------------------------------------
+Serial Commands: 'n'=next, 'p'=pause, '+'=brighter, '-'=dimmer
+==================================================
 ```

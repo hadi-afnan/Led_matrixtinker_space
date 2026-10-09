@@ -51,7 +51,7 @@
 
 // Global brightness (0 to 255)
 #define DEFAULT_BRIGHTNESS   120
-#define MAX_BRIGHTNESS       200
+#define MAX_BRIGHTNESS       220
 
 // FastLED Dynamic Milliamps Limiter
 // Prevents pulling excessive current from the 5V power supply
@@ -60,5 +60,21 @@
 
 // Frame rate throttle (FPS)
 #define TARGET_FRAME_RATE    60
+
+// =============================================================================
+// WI-FI & WEB SERVER CONFIGURATION
+// =============================================================================
+// SoftAP Mode (Direct connection from phone/tablet without router)
+#define WIFI_AP_SSID         "TinkerSpace-LED"
+#define WIFI_AP_PASSWORD     ""            // Empty for open AP, or set e.g. "tinkerspace123"
+#define WIFI_AP_CHANNEL      1
+
+// Optional Station Mode (Connects to existing makerspace router)
+#define WIFI_STA_SSID        ""            // Set your Wi-Fi SSID here (or configure via Web UI)
+#define WIFI_STA_PASSWORD    ""            // Set your Wi-Fi Password here
+
+// Local Network mDNS Hostname -> http://tinkerspace.local
+#define MDNS_HOSTNAME        "tinkerspace"
+#define WEB_SERVER_PORT      80
 
 #endif // TINKERSPACE_CONFIG_H

@@ -159,7 +159,20 @@ tinkerspace-led-display/
 6. Verify your layout in `config.h` (default is `CONFIG_LAYOUT_5X3` for the prototype).
 7. Connect your ESP32-S3 via USB-C and click **Upload**.
 
-### 3. Controls
+### 3. Controls & Web Application
+The display can be controlled either via physical buttons or wirelessly from any smartphone, laptop, or tablet:
+
+#### 🌐 Wireless Web Controller (WLED-Style)
+1. Connect your phone or laptop to the Wi-Fi Access Point: **`TinkerSpace-LED`** (no password).
+2. Open your browser and go to **`http://192.168.4.1`** (or **`http://tinkerspace.local`**).
+3. Access all space features:
+   - **Multi-Line Space Signs**: 3-line notices, big headers, and status badges for makerspace operations.
+   - **1-Click Presets**: "SPACE IS OPEN", "WORKSHOP IN PROGRESS", "3D PRINTERS ACTIVE", "LASER CUTTER BUSY", "COFFEE BREAK".
+   - **Image Studio**: Upload any image with client-side auto-crop, Floyd-Steinberg dithering, and 1-click push to display.
+   - **Pixel Art Paint**: Live 50×30 drawing board with pencil, bucket fill, eraser, and color picker.
+   - **Animations & Effects**: WLED-style generative animations with speed & brightness sliders.
+
+#### 🔘 Physical Controls
 - **Button 1 (GPIO 14)**: Cycle through animation modes (Fire, Plasma, Color Waves, Confetti, Rainbow, Meteor, etc.).
 - **Button 2 (GPIO 15)**: Pause / Resume current animation.
 - **Main Power Switch**: Safely isolate 5 V DC and AC mains.

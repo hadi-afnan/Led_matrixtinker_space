@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TinkerSpace LED Matrix Controller</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="4" />
+          <path d="M7 7h.01M12 7h.01M17 7h.01M7 12h.01M12 12h.01M17 12h.01M7 17h.01M12 17h.01M17 17h.01" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">TinkerSpace LED</h1>
+        <div class="brand-badge">50 &times; 30 MODULAR DISPLAY</div>
+      </div>
+    </div>
+
+    <!-- Quick Global Controls -->
+    <div class="header-controls">
+      <div class="quick-slider-group">
+        <span class="control-label" id="brightness-label">Brightness: 50%</span>
+        <input type="range" id="global-brightness" min="5" max="255" value="128" class="slider">
+      </div>
+
+      <div class="connection-pill" id="conn-status" title="Connection Status">
+        <span class="status-dot"></span>
+        <span class="status-text" id="conn-text">Checking...</span>
+      </div>
+
+      <button id="btn-power" class="btn-icon" title="Toggle Display Power">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+          <line x1="12" y1="2" x2="12" y2="12" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <main class="app-container">
+    <!-- Live Simulator / Preview Section -->
+    <section class="preview-section card">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Live 50 &times; 30 Matrix Monitor</h2>
+          <span class="badge" id="active-mode-badge">Mode: Active</span>
+        </div>
+        <div class="preview-actions">
+          <button id="btn-sync-preview" class="btn btn-sm btn-ghost" title="Refresh simulator">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Sync
+          </button>
+          <button id="btn-clear-matrix" class="btn btn-sm btn-danger">Clear All</button>
+        </div>
+      </div>
+
+      <!-- Virtual 50x30 LED Matrix Simulator Canvas -->
+      <div class="matrix-canvas-container">
+        <canvas id="matrix-canvas" width="500" height="300"></canvas>
+      </div>
+
+      <div class="matrix-stats">
+        <span><strong>Resolution:</strong> 50 &times; 30 px</span>
+        <span><strong>Pixels:</strong> 1,500 WS2812B</span>
+        <span id="est-current"><strong>Est. Current:</strong> ~1.8 A @ 5V</span>
+        <span id="fps-counter"><strong>FPS:</strong> 60</span>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="tab-text" id="tab-btn-text" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 7 4 4 20 4 20 7" />
+          <line x1="9" y1="20" x2="15" y2="20" />
+          <line x1="12" y1="4" x2="12" y2="20" />
+        </svg>
+        Space Signs &amp; Text
+      </button>
+
+      <button class="tab-btn" data-tab="tab-presets" id="tab-btn-presets" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+        Quick Presets
+      </button>
+
+      <button class="tab-btn" data-tab="tab-image" id="tab-btn-image" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+        Image Studio
+      </button>
+
+      <button class="tab-btn" data-tab="tab-draw" id="tab-btn-draw" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 19l7-7 3 3-7 7-3-3z" />
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+          <path d="M2 2l7.586 7.586" />
+          <circle cx="11" cy="11" r="2" />
+        </svg>
+        Pixel Art Paint
+      </button>
+
+      <button class="tab-btn" data-tab="tab-effects" id="tab-btn-effects" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+        Animations
+      </button>
+
+      <button class="tab-btn" data-tab="tab-settings" id="tab-btn-settings" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        Wi-Fi &amp; Device
+      </button>
+    </nav>
+
+    <!-- TAB 1: SPACE SIGNS & MULTI-LINE TEXT -->
+    <div id="tab-text" class="tab-pane active card">
+      <div class="tab-intro">
+        <h3>Multi-Line Space Messaging</h3>
+        <p>With 30 vertical rows, our display easily fits 3 lines of crisp text or large custom notices for makerspace events, statuses, and hours.</p>
+      </div>
+
+      <div class="form-grid">
+        <!-- Layout Mode Selector -->
+        <div class="form-group full-width">
+          <label class="form-label">Layout Style</label>
+          <div class="chip-selector" id="text-layout-selector">
+            <button class="chip active" data-layout="3line">3-Line Notice</button>
+            <button class="chip" data-layout="bigheader">Big Header + Subtitle</button>
+            <button class="chip" data-layout="badge">Status Icon + 2 Lines</button>
+            <button class="chip" data-layout="marquee">Long Scrolling Banner</button>
+          </div>
+        </div>
+
+        <!-- Line 1 -->
+        <div class="form-group">
+          <label class="form-label" for="input-line1">Line 1 (Top / Header)</label>
+          <div class="input-with-color">
+            <input type="text" id="input-line1" value="TINKERSPACE" maxlength="24" class="form-input">
+            <input type="color" id="color-line1" value="#38bdf8" class="color-picker-input" title="Line 1 Color">
+          </div>
+        </div>
+
+        <!-- Line 2 -->
+        <div class="form-group">
+          <label class="form-label" for="input-line2">Line 2 (Middle / Status)</label>
+          <div class="input-with-color">
+            <input type="text" id="input-line2" value="IS OPEN" maxlength="24" class="form-input">
+            <input type="color" id="color-line2" value="#34d399" class="color-picker-input" title="Line 2 Color">
+          </div>
+        </div>
+
+        <!-- Line 3 -->
+        <div class="form-group">
+          <label class="form-label" for="input-line3">Line 3 (Bottom / Subtitle)</label>
+          <div class="input-with-color">
+            <input type="text" id="input-line3" value="COME ON IN!" maxlength="24" class="form-input">
+            <input type="color" id="color-line3" value="#facc15" class="color-picker-input" title="Line 3 Color">
+          </div>
+        </div>
+
+        <!-- Alignment & Background -->
+        <div class="form-group">
+          <label class="form-label">Text Alignment</label>
+          <div class="radio-pill-group">
+            <label class="radio-pill"><input type="radio" name="text-align" value="left"> Left</label>
+            <label class="radio-pill active"><input type="radio" name="text-align" value="center" checked> Center</label>
+            <label class="radio-pill"><input type="radio" name="text-align" value="right"> Right</label>
+          </div>
+        </div>
+
+        <!-- Animation / Effect -->
+        <div class="form-group">
+          <label class="form-label" for="select-text-effect">Animation Effect</label>
+          <select id="select-text-effect" class="form-select">
+            <option value="static" selected>Static (Solid)</option>
+            <option value="scroll">Horizontal Smooth Scroll</option>
+            <option value="blink">Alert Blink / Flash</option>
+            <option value="pulse">Breathing Pulse</option>
+            <option value="rainbow">Rainbow Glow</option>
+          </select>
+        </div>
+
+        <!-- Speed Slider -->
+        <div class="form-group">
+          <label class="form-label" id="speed-label" for="input-text-speed">Scroll / Effect Speed: 40</label>
+          <input type="range" id="input-text-speed" min="10" max="100" value="40" class="slider">
+        </div>
+
+        <!-- Optional Icon for Badge Mode -->
+        <div class="form-group" id="badge-icon-group" style="display: none;">
+          <label class="form-label" for="select-badge-icon">Left Badge Icon</label>
+          <select id="select-badge-icon" class="form-select">
+            <option value="check">🟢 Checkmark (Open/Ready)</option>
+            <option value="cross">🔴 Cross (Closed/Stop)</option>
+            <option value="gear">⚙️ Gear (Workshop/Making)</option>
+            <option value="warning">⚠️ Warning (Active Machine)</option>
+            <option value="rocket">🚀 Rocket (Hackathon)</option>
+            <option value="coffee">☕ Coffee (Break)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button id="btn-send-text" class="btn btn-primary btn-large">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+          Send Text to Matrix
+        </button>
+        <button id="btn-preview-text" class="btn btn-secondary">Update Live Preview</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: QUICK SPACE PRESETS -->
+    <div id="tab-presets" class="tab-pane card">
+      <div class="tab-intro">
+        <h3>1-Click Space Operations</h3>
+        <p>Pre-configured signs for everyday makerspace workflows. Tap any button to instantly project the sign onto the display.</p>
+      </div>
+
+      <div class="presets-grid">
+        <div class="preset-card preset-open" data-preset="space-open">
+          <div class="preset-icon">🟢</div>
+          <div class="preset-content">
+            <h4>SPACE IS OPEN</h4>
+            <p>Welcome all makers &bull; Drop-in hours</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-closed" data-preset="space-closed">
+          <div class="preset-icon">🔴</div>
+          <div class="preset-content">
+            <h4>SPACE IS CLOSED</h4>
+            <p>See you tomorrow at 10 AM</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-workshop" data-preset="workshop">
+          <div class="preset-icon">⚙️</div>
+          <div class="preset-content">
+            <h4>WORKSHOP IN SESSION</h4>
+            <p>Live tutorial &bull; Please keep noise down</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-printer" data-preset="printer-active">
+          <div class="preset-icon">🖨️</div>
+          <div class="preset-content">
+            <h4>3D PRINTERS ACTIVE</h4>
+            <p>Bambu A1 printing &bull; Do not touch</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-laser" data-preset="laser-active">
+          <div class="preset-icon">⚡</div>
+          <div class="preset-content">
+            <h4>LASER CUTTER ACTIVE</h4>
+            <p>Safety goggles required in laser area</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-hackathon" data-preset="hackathon">
+          <div class="preset-icon">🚀</div>
+          <div class="preset-content">
+            <h4>HACKATHON NIGHT</h4>
+            <p>Build &bull; Code &bull; Ship until dawn</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-coffee" data-preset="coffee-break">
+          <div class="preset-icon">☕</div>
+          <div class="preset-content">
+            <h4>COFFEE &amp; CHAT</h4>
+            <p>Take a break in the lounge</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+
+        <div class="preset-card preset-pizza" data-preset="pizza-time">
+          <div class="preset-icon">🍕</div>
+          <div class="preset-content">
+            <h4>PIZZA HAS ARRIVED!</h4>
+            <p>Fresh slices on the center table</p>
+          </div>
+          <button class="btn btn-sm btn-preset">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: IMAGE STUDIO -->
+    <div id="tab-image" class="tab-pane card">
+      <div class="tab-intro">
+        <h3>Image &amp; Logo Uploader</h3>
+        <p>Upload logos, artwork, or photos. Images are automatically cropped, quantized, and dithered specifically for our 50 &times; 30 pixel resolution.</p>
+      </div>
+
+      <div class="image-studio-layout">
+        <!-- Upload Dropzone -->
+        <div class="dropzone" id="image-dropzone">
+          <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
+          <div class="dropzone-content">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <p><strong>Click to browse</strong> or drag &amp; drop image here</p>
+            <span class="text-muted">PNG, JPG, SVG, GIF, WebP</span>
+          </div>
+        </div>
+
+        <!-- Image Processing Settings -->
+        <div class="image-adjustments">
+          <div class="form-group">
+            <label class="form-label">Fit Mode</label>
+            <div class="radio-pill-group">
+              <label class="radio-pill active"><input type="radio" name="image-fit" value="cover" checked> Crop to Fill</label>
+              <label class="radio-pill"><input type="radio" name="image-fit" value="contain"> Letterbox</label>
+              <label class="radio-pill"><input type="radio" name="image-fit" value="stretch"> Stretch</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="brightness-adjust-label">Brightness Boost: 0</label>
+            <input type="range" id="image-brightness-adj" min="-50" max="50" value="0" class="slider">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="contrast-adjust-label">Contrast Boost: 0</label>
+            <input type="range" id="image-contrast-adj" min="-50" max="50" value="0" class="slider">
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="check-dither" checked>
+              <span>Enable Floyd-Steinberg Dithering (Smoother shading on 50&times;30)</span>
+            </label>
+          </div>
+
+          <button id="btn-upload-image" class="btn btn-primary btn-large" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Send Image to Display
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: PIXEL ART PAINT -->
+    <div id="tab-draw" class="tab-pane card">
+      <div class="tab-intro">
+        <h3>Live Pixel Art Drawing Studio</h3>
+        <p>Draw pixel-by-pixel on the 50 &times; 30 canvas. Stream live strokes directly to the physical display!</p>
+      </div>
+
+      <div class="paint-toolbar">
+        <!-- Tools -->
+        <div class="tool-group">
+          <button class="tool-btn active" data-tool="pencil" id="tool-pencil" title="Pencil">✏️ Pencil</button>
+          <button class="tool-btn" data-tool="eraser" id="tool-eraser" title="Eraser">🧼 Eraser</button>
+          <button class="tool-btn" data-tool="bucket" id="tool-bucket" title="Paint Bucket">🪣 Bucket</button>
+          <button class="tool-btn" data-tool="picker" id="tool-picker" title="Eyedropper">👁️ Picker</button>
+          <button class="tool-btn" data-tool="line" id="tool-line" title="Line Tool">📏 Line</button>
+          <button class="tool-btn" data-tool="rect" id="tool-rect" title="Rectangle">⬜ Rect</button>
+        </div>
+
+        <!-- Color Palette Swatches -->
+        <div class="palette-swatches" id="palette-swatches">
+          <!-- Populated by JS with curated vibrant RGB LED colors -->
+        </div>
+
+        <div class="custom-color-wrap">
+          <input type="color" id="draw-color-picker" value="#ff0055" title="Custom Color">
+          <label class="checkbox-label" style="font-size: 0.8rem;">
+            <input type="checkbox" id="check-stream-live" checked>
+            <span>Live Sync</span>
+          </label>
+        </div>
+
+        <div class="paint-actions">
+          <button id="btn-draw-clear" class="btn btn-sm btn-ghost">Clear</button>
+          <button id="btn-draw-push" class="btn btn-sm btn-primary">Push All</button>
+        </div>
+      </div>
+
+      <!-- Zoomed Drawing Grid Canvas -->
+      <div class="draw-canvas-viewport">
+        <canvas id="paint-canvas" width="50" height="30"></canvas>
+      </div>
+    </div>
+
+    <!-- TAB 5: ANIMATIONS & EFFECTS -->
+    <div id="tab-effects" class="tab-pane card">
+      <div class="tab-intro">
+        <h3>Matrix Visualizer Effects</h3>
+        <p>Generative 2D mathematical animations engineered to run at 60 FPS on the ESP32-S3 dual-core processor.</p>
+      </div>
+
+      <div class="effects-grid">
+        <button class="effect-card" data-effect="0">
+          <div class="effect-preview rainbow-grad"></div>
+          <h4>Rainbow Wave</h4>
+        </button>
+        <button class="effect-card" data-effect="1">
+          <div class="effect-preview fire-grad"></div>
+          <h4>2D Fire Simulation</h4>
+        </button>
+        <button class="effect-card" data-effect="2">
+          <div class="effect-preview plasma-grad"></div>
+          <h4>2D Trigonometric Plasma</h4>
+        </button>
+        <button class="effect-card" data-effect="3">
+          <div class="effect-preview ocean-grad"></div>
+          <h4>Concentric Color Waves</h4>
+        </button>
+        <button class="effect-card" data-effect="4">
+          <div class="effect-preview confetti-grad"></div>
+          <h4>Confetti Sparkles</h4>
+        </button>
+        <button class="effect-card" data-effect="5">
+          <div class="effect-preview meteor-grad"></div>
+          <h4>Meteor Rain</h4>
+        </button>
+        <button class="effect-card" data-effect="6">
+          <div class="effect-preview pulse-grad"></div>
+          <h4>Breathing Color Pulse</h4>
+        </button>
+        <button class="effect-card" data-effect="7">
+          <div class="effect-preview neon-grad"></div>
+          <h4>Gradient Sweep</h4>
+        </button>
+        <button class="effect-card" data-effect="8">
+          <div class="effect-preview matrix-grad"></div>
+          <h4>Digital Matrix Code</h4>
+        </button>
+        <button class="effect-card" data-effect="9">
+          <div class="effect-preview checker-grad"></div>
+          <h4>Checkerboard Grid</h4>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 6: SETTINGS & WI-FI -->
+    <div id="tab-settings" class="tab-pane card">
+      <div class="tab-intro">
+        <h3>Device &amp; Wi-Fi Configuration</h3>
+        <p>Configure wireless networks, hardware limits, and system parameters.</p>
+      </div>
+
+      <div class="settings-sections">
+        <div class="settings-card">
+          <h4>Wi-Fi Connection</h4>
+          <p class="text-muted">Connect the display to your makerspace Wi-Fi network or use the built-in Access Point.</p>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label" for="wifi-ssid">Network SSID</label>
+            <input type="text" id="wifi-ssid" placeholder="Makerspace-WiFi" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="wifi-pass">Password</label>
+            <input type="password" id="wifi-pass" placeholder="••••••••" class="form-input">
+          </div>
+          <button id="btn-save-wifi" class="btn btn-primary">Connect &amp; Save</button>
+        </div>
+
+        <div class="settings-card">
+          <h4>Hardware Safety &amp; Specs</h4>
+          <ul class="specs-list">
+            <li><strong>Controller:</strong> ESP32-S3 (Xtensa Dual-Core LX7 @ 240 MHz)</li>
+            <li><strong>Active Layout:</strong> 5 &times; 3 Modules (50 &times; 30 = 1,500 LEDs)</li>
+            <li><strong>Data Output:</strong> GPIO 4 (via 74AHCT125 Level Shifter)</li>
+            <li><strong>Power Supply:</strong> 5V / 100A (500W G-Power PSU)</li>
+            <li><strong>Dynamic Power Cap:</strong> 25,000 mA (FastLED safety limiter)</li>
+            <li><strong>mDNS Address:</strong> <a href="http://tinkerspace.local" target="_blank" class="link">http://tinkerspace.local</a></li>
+            <li><strong>AP Fallback IP:</strong> 192.168.4.1 (SSID: TinkerSpace-LED)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast">Action sent!</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
