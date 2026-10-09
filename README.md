@@ -36,7 +36,7 @@ To preserve design lineage and avoid confusion, the project maintains two docume
 | **Module Footprint** | 165.6 mm × 165.6 mm per module | 165.6 mm × 165.6 mm per module |
 | **Status** | **Physical build tested & active** | Documented design configuration |
 
-Both revisions use the same underlying modular components and firmware codebase. The active layout is configured with a single line change in [`firmware/arduino/led-display/config.h`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led-display/config.h).
+Both revisions use the same underlying modular components and firmware codebase. The active layout is configured with a single line change in [`firmware/arduino/led_display/config.h`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led_display/config.h).
 
 ---
 
@@ -154,7 +154,7 @@ tinkerspace-led-display/
 1. Install the [Arduino IDE](https://www.arduino.cc/en/software) or PlatformIO.
 2. Add ESP32 board support via the Boards Manager: `esp32 by Espressif Systems`.
 3. Install the **FastLED** library (version 3.6.0 or higher).
-4. Open [`firmware/arduino/led-display/led-display.ino`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led-display/led-display.ino).
+4. Open [`firmware/arduino/led_display/led_display.ino`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led_display/led_display.ino).
 5. Select board: **ESP32S3 Dev Module** (USB CDC On Boot: Enabled).
 6. Verify your layout in `config.h` (default is `CONFIG_LAYOUT_5X3` for the prototype).
 7. Connect your ESP32-S3 via USB-C and click **Upload**.

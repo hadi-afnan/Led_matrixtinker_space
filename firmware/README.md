@@ -42,7 +42,7 @@ firmware/
 
 1. Install the ESP32 board definitions in Arduino IDE (Tools > Board > Boards Manager > `esp32`).
 2. Install `FastLED` version 3.6.0+ via the Library Manager.
-3. Open `arduino/led-display/led-display.ino`.
+3. Open `arduino/led_display/led_display.ino`.
 4. Check `config.h` to ensure your active layout (`CONFIG_LAYOUT_5X3` or `CONFIG_LAYOUT_4X3`) matches your build.
 5. Select board: **ESP32S3 Dev Module** (USB CDC On Boot: Enabled).
 6. Upload the sketch and open Serial Monitor at **115200 baud**.

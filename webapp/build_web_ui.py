@@ -9,7 +9,7 @@ import os
 import re
 
 WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_HEADER = os.path.abspath(os.path.join(WEBAPP_DIR, '..', 'firmware', 'arduino', 'led-display', 'web_ui.h'))
+OUTPUT_HEADER = os.path.abspath(os.path.join(WEBAPP_DIR, '..', 'firmware', 'arduino', 'led_display', 'web_ui.h'))
 
 def bundle_web_ui():
     html_path = os.path.join(WEBAPP_DIR, 'index.html')

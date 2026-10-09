@@ -50,7 +50,7 @@ Connect your ESP32-S3 to your computer using a data-capable USB-C cable. Under t
 
 ## 4. Hardware Configuration (`config.h`)
 
-Open [`firmware/arduino/led-display/config.h`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led-display/config.h). The firmware is built with compile-time configuration flags:
+Open [`firmware/arduino/led_display/config.h`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led_display/config.h). The firmware is built with compile-time configuration flags:
 
 ### Selecting the Display Layout
 Uncomment the target layout macro that matches your physical hardware:
@@ -87,7 +87,7 @@ Adjust current limits to match your power wiring safety profile:
 
 ## 5. Compiling and Flashing
 
-1. Open [`firmware/arduino/led-display/led-display.ino`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led-display/led-display.ino).
+1. Open [`firmware/arduino/led_display/led_display.ino`](file:///e:/Embedded/Projects/led_metrix/firmware/arduino/led_display/led_display.ino).
 2. Click the **Verify** checkmark button to ensure compilation succeeds.
 3. Click the **Upload** arrow button.
 4. *If upload fails to initiate automatically*: Hold down the **BOOT** button on the ESP32-S3, tap **RST/EN**, then release **BOOT** to force ROM download mode, and click Upload again.
