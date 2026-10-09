@@ -10,39 +10,59 @@ This directory contains the production firmware and diagnostic test sketches for
 firmware/
 ├── README.md
 └── arduino/
-    ├── led-display/               # Production firmware
-    │   ├── led-display.ino        # Main setup, loop, and timing orchestrator
-    │   ├── config.h               # Central configuration (pins, grid, brightness, limits)
-    │   ├── display_mapping.h      # 2D (X, Y) to 1D physical serpentine index abstraction
+    ├── led_display/               # Production firmware & embedded web app
+    │   ├── led_display.ino        # Main setup, loop, button, and engine orchestrator
+    │   ├── config.h               # Central configuration (pins, grid, brightness, Wi-Fi, limits)
+    │   ├── display_mapping.h      # Bottom-left (X, Y) to physical row-serpentine mapping
     │   ├── display_mapping.cpp
     │   ├── buttons.h              # Non-blocking tactile button debouncing class
     │   ├── buttons.cpp
     │   ├── animations.h           # High-performance visual effects & test patterns
-    │   └── animations.cpp
+    │   ├── animations.cpp
+    │   ├── text_renderer.h        # Multi-line signs, big header, badge, & marquee engine
+    │   ├── text_renderer.cpp
+    │   ├── web_server_handler.h   # SoftAP + Station Wi-Fi, REST API, & WebServer
+    │   ├── web_server_handler.cpp
+    │   └── web_ui.h               # Precompiled PROGMEM single-page web app bundle
     └── examples/                  # Diagnostic bring-up sketches
         ├── 01_single_module_test/
         ├── 02_matrix_serpentine_test/
-        └── 03_button_input_test/
+        ├── 03_button_input_test/
+        └── 04_corner_test/        # 4-corner coordinate validation sketch
 ```
 
 ---
 
 ## ⚙️ Key Architectural Highlights
 
-1. **Logical 2D Canvas**: All visual effects are written against a standard `(X, Y)` Cartesian coordinate plane with origin `(0, 0)` at the top-left corner.
-2. **Double-Serpentine Hardware Abstraction**: The `DisplayMapping` class handles both:
-   - Module-to-module serpentine routing across rows.
-   - Internal 10×10 panel serpentine trace routing.
-3. **Non-Blocking Architecture**: Animations use millisecond timing. No `delay()` calls are used, ensuring instantaneous button response.
-4. **Safety Enforcement**: Hardware current limits are monitored at runtime via FastLED's dynamic power management to safeguard the power supply and distribution bus.
+1. **Logical 2D Canvas**: All visual effects, text layouts, and web simulator pixels use a Cartesian coordinate plane with origin `(0, 0)` at the **Bottom-Left** corner:
+   - $X = 0 \dots 49$ (Left to Right)
+   - $Y = 0 \dots 29$ (Bottom to Top)
+2. **Row-Serpentine Hardware Abstraction**: The `DisplayMapping` class translates logical coordinates to the physical LED index:
+   - Row 0 (bottom, $y=0$): Left to Right ($0 \dots 49$)
+   - Row 1 ($y=1$): Right to Left ($99 \dots 50$)
+   - Row $y$ even: $(y \times 50) + x$
+   - Row $y$ odd: $(y \times 50) + (49 - x)$
+3. **Embedded Web Controller**: Complete WLED-style single-page web application compiled into ESP32-S3 Flash (PROGMEM) requiring zero LittleFS/SPIFFS partition setup. Accessible offline via SoftAP or via local Wi-Fi.
+4. **Non-Blocking Architecture**: 60 FPS animation loop with millisecond timing. No blocking `delay()` calls, ensuring instantaneous web server API and tactile button responsiveness.
+5. **Electrical Safety Enforcement**: FastLED dynamic power limiting enforces a 25 A (or custom) current limit at 5V, preventing over-current conditions.
 
 ---
 
-## 🚀 Quick Flashing Instructions
+## 🚀 Flashing & Quick Start
 
-1. Install the ESP32 board definitions in Arduino IDE (Tools > Board > Boards Manager > `esp32`).
-2. Install `FastLED` version 3.6.0+ via the Library Manager.
-3. Open `arduino/led_display/led_display.ino`.
-4. Check `config.h` to ensure your active layout (`CONFIG_LAYOUT_5X3` or `CONFIG_LAYOUT_4X3`) matches your build.
-5. Select board: **ESP32S3 Dev Module** (USB CDC On Boot: Enabled).
-6. Upload the sketch and open Serial Monitor at **115200 baud**.
+1. **Open Sketch**: In Arduino IDE, select **File > Open** and choose `firmware/arduino/led_display/led_display.ino`.
+   *(All 12 sibling `.h` and `.cpp` files will open automatically as tabs).*
+2. **Board Settings**:
+   - Board: **ESP32S3 Dev Module** (or your specific S3 board)
+   - USB CDC On Boot: **Enabled** (for Serial Monitor output)
+   - Flash Size: **8MB** or **16MB** (Default partitions work out of the box)
+3. **Required Library**:
+   - `FastLED` version 3.6.0+ (install via Arduino Library Manager)
+4. **Flash & Run**:
+   - Click **Upload**.
+   - Open Serial Monitor at **115200 baud** to view system diagnostic output.
+5. **Connect to Web App**:
+   - On your phone or PC, connect to Wi-Fi: **`TinkerSpace-LED`** (password: `makeanything`).
+   - Open your browser to: **`http://192.168.4.1`** (or `http://tinkerspace.local` on mDNS).
+   - Enjoy live multi-line space sign creation, image/logo dithering, real-time 50×30 pixel painting, and visual effects!
