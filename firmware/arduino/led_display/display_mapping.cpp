@@ -108,36 +108,17 @@ int DisplayMapping::getPixelIndex(int x, int y) {
         return -1;
     }
 
-    // 2. Identify target module coordinates
-    int module_x = x / MODULE_PIXELS_X;
-    int module_y = y / MODULE_PIXELS_Y;
-
-    // 3. Local coordinates inside the 10x10 module
-    int local_x = x % MODULE_PIXELS_X;
-    int local_y = y % MODULE_PIXELS_Y;
-
-    // 4. Inter-Module Serpentine:
-    // Even module rows (0, 2) run Left -> Right.
-    // Odd module rows (1) run Right -> Left.
-    int module_index;
-    if ((module_y & 1) == 0) {
-        module_index = (module_y * MATRIX_MODULES_X) + module_x;
+    // Left to right, bottom to top, row serpentine raster
+    // Origin (0,0) is at Bottom-Left:
+    // - Row y=0 (bottom row) runs Left -> Right  (0 -> 49)
+    // - Row y=1 (next row)   runs Right -> Left (99 -> 50)
+    // - Row y=2 (next row)   runs Left -> Right (100 -> 149)
+    // Alternating upwards to y=29
+    if ((y & 1) == 0) {
+        return (y * DISPLAY_WIDTH) + x;
     } else {
-        module_index = (module_y * MATRIX_MODULES_X) + (MATRIX_MODULES_X - 1 - module_x);
+        return (y * DISPLAY_WIDTH) + (DISPLAY_WIDTH - 1 - x);
     }
-
-    // 5. Intra-Module Serpentine (inside standard 10x10 WS2812B FPCB):
-    // Even rows within module run Left -> Right.
-    // Odd rows within module run Right -> Left.
-    int pixel_in_module;
-    if ((local_y & 1) == 0) {
-        pixel_in_module = (local_y * MODULE_PIXELS_X) + local_x;
-    } else {
-        pixel_in_module = (local_y * MODULE_PIXELS_X) + (MODULE_PIXELS_X - 1 - local_x);
-    }
-
-    // 6. Calculate absolute 1D index
-    return (module_index * LEDS_PER_MODULE) + pixel_in_module;
 }
 
 void DisplayMapping::setPixel(int x, int y, CRGB color) {
@@ -204,7 +185,8 @@ void DisplayMapping::drawChar(int x, int y, char c, CRGB color) {
         uint8_t line = pgm_read_byte(&(FONT_5X7[charIndex][col]));
         for (int row = 0; row < 7; row++) {
             if (line & (1 << row)) {
-                setPixel(x + col, y + row, color);
+                // With bottom-to-top coordinates, row 0 is top of character (y + 6)
+                setPixel(x + col, y + (6 - row), color);
             }
         }
     }

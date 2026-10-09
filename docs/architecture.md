@@ -33,46 +33,40 @@ graph TD
 ## 2. Coordinate Mapping: From 2D (X, Y) to 1D Serial Index
 
 A core design requirement is that software developers, students, and game designers should not need to know where individual wires are soldered. They draw to an intuitive Cartesian grid:
-- **Origin `(0, 0)`**: Top-Left corner of the entire display.
-- **X-axis**: Points right (`0 <= X < TOTAL_WIDTH`).
-- **Y-axis**: Points down (`0 <= Y < TOTAL_HEIGHT`).
+- **Origin `(0, 0)`**: **Bottom-Left corner** of the entire display.
+- **X-axis**: Points right (`x = 0 .. DISPLAY_WIDTH - 1`, left to right).
+- **Y-axis**: Points up (`y = 0 .. DISPLAY_HEIGHT - 1`, bottom to top).
 
-### Physical Topology Variations
+### Physical Serpentine Raster Topology
 
-```
+```text
 ========================================================================
-LAYOUT 1: Physical Prototype (5 modules wide × 3 modules high = 50 × 30)
+Left to right, bottom to top, row serpentine raster
 ========================================================================
-Row 0:  [Mod 0 ] ---> [Mod 1 ] ---> [Mod 2 ] ---> [Mod 3 ] ---> [Mod 4 ] ──┐
-                                                                          │
-Row 1:  [Mod 9 ] <─── [Mod 8 ] <─── [Mod 7 ] <─── [Mod 6 ] <─── [Mod 5 ] <─┘
-        │
-Row 2:  └──> [Mod 10] ---> [Mod 11] ---> [Mod 12] ---> [Mod 13] ---> [Mod 14]
-
-========================================================================
-LAYOUT 2: Standard 4:3 Target (4 modules wide × 3 modules high = 40 × 30)
-========================================================================
-Row 0:  [Mod 0 ] ---> [Mod 1 ] ---> [Mod 2 ] ---> [Mod 3 ] ──┐
-                                                             │
-Row 1:  [Mod 7 ] <─── [Mod 6 ] <─── [Mod 5 ] <─── [Mod 4 ] <─┘
-        │
-Row 2:  └──> [Mod 8 ] ---> [Mod 9 ] ---> [Mod 10] ---> [Mod 11]
+Row 29 (Top):    [1499] <── [1498] <── ... <── [1451] <── [1450] (Right to Left)
+                  │
+Row 28:          [1400] ──> [1401] ──> ... ──> [1448] ──> [1449] (Left to Right)
+                  ...
+Row 2:           [100]  ──> [101]  ──> ... ──> [148]  ──> [149]  (Left to Right)
+                  │
+Row 1:           [99]   <── [98]   <── ... <── [51]   <── [50]   (Right to Left)
+                  ▲
+Row 0 (Bottom):  [0]    ──> [1]    ──> ... ──> [48]   ──> [49]   (Left to Right)
+                (DIN)
 ```
 
----
+### Physical Index Formula
+Given global coordinates `(x, y)` where origin `(0, 0)` is at the bottom-left:
+- If $y$ is **even** ($y = 0, 2, 4, \dots$): row runs Left $\to$ Right:
+  $$\text{Index}(x, y) = (y \times \text{DISPLAY\_WIDTH}) + x$$
+- If $y$ is **odd** ($y = 1, 3, 5, \dots$): row runs Right $\to$ Left:
+  $$\text{Index}(x, y) = (y \times \text{DISPLAY\_WIDTH}) + (\text{DISPLAY\_WIDTH} - 1 - x)$$
 
-## 3. The Two-Stage Serpentine Transform
-
-Each physical pixel location requires a two-stage transformation:
-
-### Stage 1: Inter-Module Serpentine (Module Grid Location)
-Given global coordinates `(x, y)`:
-1. Determine the module grid position:
-   $$\text{module\_x} = \lfloor x / 10 \rfloor$$
-   $$\text{module\_y} = \lfloor y / 10 \rfloor$$
-2. Calculate the local coordinate within that module:
-   $$\text{local\_x} = x \pmod{10}$$
-   $$\text{local\_y} = y \pmod{10}$$
+### Four-Corner Physical Index Reference (50×30 Matrix)
+- **Bottom-Left `(0, 0)`**: **Physical LED 0** (DIN from microcontroller)
+- **Bottom-Right `(49, 0)`**: **Physical LED 49** (End of bottom row)
+- **Top-Right `(49, 29)`**: **Physical LED 1450**
+- **Top-Left `(0, 29)`**: **Physical LED 1499** (Final LED in chain)
 3. Because rows alternate direction (serpentine cabling between modules):
    - If `module_y` is **even** (Rows 0, 2, ...): modules run left-to-right:
      $$\text{module\_index} = (\text{module\_y} \times \text{MODULES\_X}) + \text{module\_x}$$

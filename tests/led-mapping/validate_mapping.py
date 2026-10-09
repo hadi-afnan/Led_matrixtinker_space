@@ -9,39 +9,19 @@ and no missing pixels).
 
 import sys
 
-def get_pixel_index(x: int, y: int, modules_x: int, modules_y: int) -> int:
-    module_size = 10
-    total_width = modules_x * module_size
-    total_height = modules_y * module_size
-
+def get_pixel_index(x: int, y: int, width: int = 50, height: int = 30) -> int:
     # Boundary check
-    if x < 0 or x >= total_width or y < 0 or y >= total_height:
+    if x < 0 or x >= width or y < 0 or y >= height:
         return -1
 
-    module_x = x // module_size
-    module_y = y // module_size
-
-    local_x = x % module_size
-    local_y = y % module_size
-
-    # Inter-Module Serpentine:
-    # Even rows (0, 2): Left to Right
-    # Odd rows (1): Right to Left
-    if (module_y % 2) == 0:
-        module_index = (module_y * modules_x) + module_x
+    # Left to right, bottom to top, row serpentine raster:
+    # Origin (0,0) at bottom-left:
+    # Row y=0 (bottom row) runs Left -> Right
+    # Row y=1 (next row)   runs Right -> Left, alternating upwards
+    if (y % 2) == 0:
+        return (y * width) + x
     else:
-        module_index = (module_y * modules_x) + (modules_x - 1 - module_x)
-
-    # Intra-Module Serpentine (inside standard 10x10 panel):
-    # Even rows: Left to Right
-    # Odd rows: Right to Left
-    if (local_y % 2) == 0:
-        pixel_in_module = (local_y * module_size) + local_x
-    else:
-        pixel_in_module = (local_y * module_size) + (module_size - 1 - local_x)
-
-    leds_per_module = module_size * module_size
-    return (module_index * leds_per_module) + pixel_in_module
+        return (y * width) + (width - 1 - x)
 
 
 def test_layout(name: str, modules_x: int, modules_y: int):
@@ -59,7 +39,7 @@ def test_layout(name: str, modules_x: int, modules_y: int):
 
     for y in range(height):
         for x in range(width):
-            idx = get_pixel_index(x, y, modules_x, modules_y)
+            idx = get_pixel_index(x, y, width, height)
             if idx < 0 or idx >= total_leds:
                 out_of_bounds.append((x, y, idx))
             elif idx in mapped_indices:
@@ -74,11 +54,18 @@ def test_layout(name: str, modules_x: int, modules_y: int):
     print(f"  Out of Bounds Errors  : {len(out_of_bounds)}")
 
     # Check boundaries outside display
-    assert get_pixel_index(-1, 0, modules_x, modules_y) == -1, "Left bound failed"
-    assert get_pixel_index(width, 0, modules_x, modules_y) == -1, "Right bound failed"
-    assert get_pixel_index(0, -1, modules_x, modules_y) == -1, "Top bound failed"
-    assert get_pixel_index(0, height, modules_x, modules_y) == -1, "Bottom bound failed"
+    assert get_pixel_index(-1, 0, width, height) == -1, "Left bound failed"
+    assert get_pixel_index(width, 0, width, height) == -1, "Right bound failed"
+    assert get_pixel_index(0, -1, width, height) == -1, "Top bound failed"
+    assert get_pixel_index(0, height, width, height) == -1, "Bottom bound failed"
     print("  Boundary Checks       : PASS")
+
+    # Print Corner Indices for physical verification
+    print(f"  Corner Indices Check  :")
+    print(f"    Bottom-Left  (0, 0)   -> Index {get_pixel_index(0, 0, width, height):4d}  [First LED / DIN]")
+    print(f"    Bottom-Right ({width-1}, 0)  -> Index {get_pixel_index(width-1, 0, width, height):4d}  [End of bottom row]")
+    print(f"    Top-Left     (0, {height-1})  -> Index {get_pixel_index(0, height-1, width, height):4d}")
+    print(f"    Top-Right    ({width-1}, {height-1}) -> Index {get_pixel_index(width-1, height-1, width, height):4d}")
 
     if len(mapped_indices) == total_leds and len(duplicates) == 0:
         print(f"  Result                : SUCCESS! Perfect 1:1 Bijection.")
