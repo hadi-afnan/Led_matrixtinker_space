@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include <FastLED.h>
@@ -40,6 +41,7 @@ private:
     CRGB* _leds;
 
     WebServer _server;
+    DNSServer _dnsServer;
     Preferences _preferences;
     ActiveDisplaySource _activeSource;
     bool _powerOn;

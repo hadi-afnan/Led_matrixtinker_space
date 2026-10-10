@@ -12,23 +12,6 @@ WebServerHandler::WebServerHandler(DisplayMapping& display, AnimationEngine& eng
       _lastReconnectAttempt(0) {}
 
 void WebServerHandler::begin() {
-    // 1. Start Wi-Fi in SoftAP + Station mode
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.setAutoReconnect(true);
-
-    // Setup Access Point for standalone direct connection
-    bool apSuccess = WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD, WIFI_AP_CHANNEL);
-    Serial.println();
-    Serial.println(F("=========================================="));
-    Serial.println(F("   TINKERSPACE WI-FI & WEB CONTROLLER     "));
-    Serial.println(F("=========================================="));
-    if (apSuccess) {
-        Serial.print(F("Access Point SSID : ")); Serial.println(WIFI_AP_SSID);
-        Serial.print(F("AP IP Address     : http://")); Serial.println(WiFi.softAPIP());
-    } else {
-        Serial.println(F("Warning: Failed to start Wi-Fi Access Point!"));
-    }
-
     // Stored credentials take precedence; compile-time credentials are useful
     // for a first deployment. Connection is intentionally non-blocking.
     _preferences.begin("ledmatrix", false);
@@ -36,13 +19,51 @@ void WebServerHandler::begin() {
     _display.setWiringType((MatrixWiringType)savedWiring);
     _stationSsid = _preferences.getString("wifi_ssid", WIFI_STA_SSID);
     String stationPass = _preferences.getString("wifi_pass", WIFI_STA_PASSWORD);
+
+    // 1. Wi-Fi Mode: Pure AP if station SSID is not configured, or AP+STA if station configured
+    // Setting pure WIFI_AP avoids periodic radio channel scanning that causes mobile disconnections.
     if (_stationSsid.length() > 0) {
-        Serial.print(F("Joining Wi-Fi: ")); Serial.println(_stationSsid);
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.setAutoReconnect(true);
+    } else {
+        WiFi.mode(WIFI_AP);
+    }
+
+    // Configure static IP for SoftAP (192.168.4.1)
+    IPAddress apIP(192, 168, 4, 1);
+    IPAddress apGateway(192, 168, 4, 1);
+    IPAddress apSubnet(255, 255, 255, 0);
+    WiFi.softAPConfig(apIP, apGateway, apSubnet);
+
+    // Setup Access Point for standalone direct phone/PC connection
+    const char* apPass = (strlen(WIFI_AP_PASSWORD) >= 8) ? WIFI_AP_PASSWORD : NULL;
+    bool apSuccess = WiFi.softAP(WIFI_AP_SSID, apPass, WIFI_AP_CHANNEL);
+
+    Serial.println();
+    Serial.println(F("=========================================="));
+    Serial.println(F("   TINKERSPACE WI-FI & WEB CONTROLLER     "));
+    Serial.println(F("=========================================="));
+    if (apSuccess) {
+        Serial.print(F("Access Point SSID : ")); Serial.println(WIFI_AP_SSID);
+        Serial.print(F("AP Password       : ")); Serial.println(apPass ? apPass : "(Open network)");
+        Serial.print(F("AP IP Address     : http://")); Serial.println(WiFi.softAPIP());
+    } else {
+        Serial.println(F("Warning: Failed to start Wi-Fi Access Point!"));
+    }
+
+    // 2. Start Captive Portal DNS Server (DNS port 53: resolve all domain requests to 192.168.4.1)
+    _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    _dnsServer.start(53, "*", apIP);
+    Serial.println(F("Captive Portal DNS: Listening on port 53"));
+
+    // 3. Optional Station Connection (Makerspace Router)
+    if (_stationSsid.length() > 0) {
+        Serial.print(F("Joining Wi-Fi     : ")); Serial.println(_stationSsid);
         WiFi.begin(_stationSsid.c_str(), stationPass.c_str());
         _lastReconnectAttempt = millis();
     }
 
-    // 2. Start mDNS (http://tinkerspace.local)
+    // 4. Start mDNS (http://tinkerspace.local)
     if (MDNS.begin(MDNS_HOSTNAME)) {
         Serial.print(F("mDNS Responder    : http://"));
         Serial.print(MDNS_HOSTNAME);
@@ -50,16 +71,17 @@ void WebServerHandler::begin() {
         MDNS.addService("http", "tcp", WEB_SERVER_PORT);
     }
 
-    // 3. Register HTTP Routes
+    // 5. Register HTTP Routes
     registerRoutes();
 
-    // 4. Start HTTP Server
+    // 6. Start HTTP Server
     _server.begin();
     Serial.println(F("HTTP Web Server running on port 80."));
     Serial.println(F("=========================================="));
 }
 
 void WebServerHandler::handleClient() {
+    _dnsServer.processNextRequest();
     _server.handleClient();
     serviceWiFi();
 }
@@ -80,16 +102,24 @@ void WebServerHandler::sendJsonResponse(int code, const String& json) {
 }
 
 void WebServerHandler::registerRoutes() {
-    // OPTIONS preflight handler for CORS
+    // OPTIONS preflight handler for CORS and Captive Portal Wildcard Handler
     _server.onNotFound([this]() {
         if (_server.method() == HTTP_OPTIONS) {
             _server.sendHeader("Access-Control-Allow-Origin", "*");
             _server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
             _server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
             _server.send(204);
-        } else {
-            _server.send(404, "text/plain", "Not Found");
+            return;
         }
+
+        // If not an API request, redirect any unknown URL to root (Captive Portal)
+        if (!_server.uri().startsWith("/api/")) {
+            _server.sendHeader("Location", "http://192.168.4.1/", true);
+            _server.send(302, "text/plain", "");
+            return;
+        }
+
+        _server.send(404, "text/plain", "Not Found");
     });
 
     // Root UI Page
@@ -114,21 +144,29 @@ void WebServerHandler::registerRoutes() {
     _server.on("/api/factory_reset", HTTP_POST, [this]() { handleApiFactoryReset(); });
     _server.on("/api/test_module", HTTP_POST, [this]() { handleApiTestModule(); });
 
-    // Captive portal detection redirects for iOS and Android
+    // Captive portal detection redirects for iOS, Android, and Windows
     _server.on("/hotspot-detect.html", HTTP_GET, [this]() {
-        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
         _server.send(302, "text/plain", "");
     });
     _server.on("/generate_204", HTTP_GET, [this]() {
-        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
+        _server.send(302, "text/plain", "");
+    });
+    _server.on("/gen_204", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
         _server.send(302, "text/plain", "");
     });
     _server.on("/canonical.html", HTTP_GET, [this]() {
-        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
         _server.send(302, "text/plain", "");
     });
     _server.on("/connecttest.txt", HTTP_GET, [this]() {
-        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
+        _server.send(302, "text/plain", "");
+    });
+    _server.on("/ncsi.txt", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/", true);
         _server.send(302, "text/plain", "");
     });
 }
@@ -425,6 +463,7 @@ void WebServerHandler::handleApiWiFi() {
         _preferences.remove("wifi_pass");
         _stationSsid = "";
         WiFi.disconnect();
+        WiFi.mode(WIFI_AP);
         sendJsonResponse(200, "{\"ok\":true,\"status\":\"Saved Wi-Fi network removed; local AP remains active\"}");
         return;
     }
@@ -433,6 +472,7 @@ void WebServerHandler::handleApiWiFi() {
         _preferences.putString("wifi_ssid", ssid);
         _preferences.putString("wifi_pass", pass);
         _stationSsid = ssid;
+        WiFi.mode(WIFI_AP_STA);
         WiFi.begin(ssid.c_str(), pass.c_str());
         _lastReconnectAttempt = millis();
         sendJsonResponse(200, "{\"ok\":true,\"status\":\"Connecting; local AP remains available at 192.168.4.1\"}");

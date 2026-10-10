@@ -74,7 +74,7 @@
 // =============================================================================
 // SoftAP Mode (Direct connection from phone/tablet without router)
 #define WIFI_AP_SSID         "TinkerSpace-LED"
-#define WIFI_AP_PASSWORD     ""            // Empty for open AP, or set e.g. "tinkerspace123"
+#define WIFI_AP_PASSWORD     "makeanything" // WPA2 password (min 8 chars) matching README; set to "" for open network
 #define WIFI_AP_CHANNEL      1
 
 // Optional Station Mode (Connects to existing makerspace router)
