@@ -934,7 +934,7 @@ body {
 }
 
 /* ==========================================================================
-   Toast Notification
+   Toast Notification & Visual Feedback
    ========================================================================== */
 .toast {
   position: fixed;
@@ -952,9 +952,163 @@ body {
   opacity: 0;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1000;
+  backdrop-filter: blur(12px);
 }
 
 .toast.show {
   transform: translateY(0);
   opacity: 1;
+}
+
+.toast.toast-success {
+  border-color: var(--accent-green);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(52, 211, 153, 0.35);
+}
+
+.toast.toast-error {
+  border-color: var(--accent-rose);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(244, 63, 94, 0.35);
+}
+
+.toast.toast-info {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.35);
+}
+
+/* Touch & Selection Feedback */
+#paint-canvas {
+  touch-action: none;
+}
+
+.preset-card.selected {
+  border-color: var(--accent-green) !important;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.35) !important;
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+.effect-card.active {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35) !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+/* ==========================================================================
+   Mobile & Phone Friendly Responsive Design
+   ========================================================================== */
+@media (max-width: 640px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem 1rem;
+    gap: 0.65rem;
+  }
+
+  .app-header .brand {
+    justify-content: flex-start;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+  }
+
+  .header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 0.65rem;
+  }
+
+  .quick-slider-group {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-container {
+    padding: 0.65rem;
+    gap: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .preview-actions {
+    width: 100%;
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .preview-actions .btn {
+    flex: 1;
+    text-align: center;
+    padding: 0.45rem 0.25rem;
+    font-size: 0.72rem;
+  }
+
+  .matrix-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+  }
+
+  .nav-tabs {
+    gap: 0.4rem;
+    padding-bottom: 0.4rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-btn {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .action-bar .btn {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .presets-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .effects-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .toast {
+    bottom: 1.25rem;
+    right: auto;
+    left: 50%;
+    transform: translate(-50%, 80px);
+    width: calc(100% - 2rem);
+    max-width: 360px;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .toast.show {
+    transform: translate(-50%, 0);
+  }
 }

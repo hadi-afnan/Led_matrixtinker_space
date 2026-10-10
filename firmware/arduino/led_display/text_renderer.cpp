@@ -9,6 +9,9 @@ TextRenderer::TextRenderer(DisplayMapping& display)
       _color1(CRGB(56, 189, 248)),
       _color2(CRGB(52, 211, 153)),
       _color3(CRGB(250, 204, 21)),
+      _baseColor1(CRGB(56, 189, 248)),
+      _baseColor2(CRGB(52, 211, 153)),
+      _baseColor3(CRGB(250, 204, 21)),
       _layout(LAYOUT_3LINE),
       _effect(EFFECT_STATIC),
       _align("center"),
@@ -18,7 +21,8 @@ TextRenderer::TextRenderer(DisplayMapping& display)
       _lastUpdate(0),
       _lastBlinkTime(0),
       _blinkState(true),
-      _pulsePhase(0) {}
+      _pulsePhase(0),
+      _rainbowHue(0) {}
 
 void TextRenderer::begin() {
     _scrollOffset = DISPLAY_WIDTH;
@@ -34,6 +38,9 @@ void TextRenderer::setText(const String& l1, const String& l2, const String& l3)
 }
 
 void TextRenderer::setColors(CRGB c1, CRGB c2, CRGB c3) {
+    _baseColor1 = c1;
+    _baseColor2 = c2;
+    _baseColor3 = c3;
     _color1 = c1;
     _color2 = c2;
     _color3 = c3;
@@ -147,7 +154,11 @@ void TextRenderer::update() {
     if (!_active) return;
 
     // Effect Timing Handlers
-    if (_effect == EFFECT_BLINK) {
+    if (_effect == EFFECT_STATIC) {
+        _color1 = _baseColor1;
+        _color2 = _baseColor2;
+        _color3 = _baseColor3;
+    } else if (_effect == EFFECT_BLINK) {
         if (millis() - _lastBlinkTime > 500) {
             _lastBlinkTime = millis();
             _blinkState = !_blinkState;
@@ -156,14 +167,20 @@ void TextRenderer::update() {
             _display.clear();
             return;
         }
-    }
-
-    if (_effect == EFFECT_PULSE) {
-        _pulsePhase += 3;
-        uint8_t b = sin8(_pulsePhase);
-        _color1.nscale8(b);
-        _color2.nscale8(b);
-        _color3.nscale8(b);
+        _color1 = _baseColor1;
+        _color2 = _baseColor2;
+        _color3 = _baseColor3;
+    } else if (_effect == EFFECT_PULSE) {
+        _pulsePhase += 4;
+        uint8_t b = beatsin8(30, 30, 255);
+        _color1 = _baseColor1; _color1.nscale8(b);
+        _color2 = _baseColor2; _color2.nscale8(b);
+        _color3 = _baseColor3; _color3.nscale8(b);
+    } else if (_effect == EFFECT_RAINBOW) {
+        _rainbowHue += 2;
+        _color1 = CHSV(_rainbowHue, 220, 255);
+        _color2 = CHSV(_rainbowHue + 64, 220, 255);
+        _color3 = CHSV(_rainbowHue + 128, 220, 255);
     }
 
     if (_effect == EFFECT_SCROLL) {

@@ -50,6 +50,9 @@ private:
     CRGB _color1;
     CRGB _color2;
     CRGB _color3;
+    CRGB _baseColor1;
+    CRGB _baseColor2;
+    CRGB _baseColor3;
 
     TextLayoutStyle _layout;
     TextEffectStyle _effect;
@@ -62,6 +65,7 @@ private:
     unsigned long _lastBlinkTime;
     bool _blinkState;
     uint8_t _pulsePhase;
+    uint8_t _rainbowHue;
 
     void render3Line();
     void renderBigHeader();

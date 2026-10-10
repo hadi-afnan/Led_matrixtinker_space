@@ -50,10 +50,9 @@ private:
     void handleApiClear();
     void handleApiMode();
     void handleApiPixel();
-    void handleApiFrameRaw();
+    void handleApiFramePost();
     void handleApiGetFrame();
     void handleApiText();
-    void handleApiImage();
     void handleApiWiFi();
 
     // CORS and helper utilities

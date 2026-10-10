@@ -190,10 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // =============================================================================
 // UI Feedback & Toast
 // =============================================================================
-function showToast(message) {
-  toastEl.textContent = message;
-  toastEl.classList.add('show');
-  setTimeout(() => toastEl.classList.remove('show'), 2500);
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = 'toast show toast-' + type;
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2600);
 }
 
 // =============================================================================
@@ -237,7 +242,7 @@ function initGlobalControls() {
   btnPower.addEventListener('click', () => {
     state.powerOn = !state.powerOn;
     btnPower.style.color = state.powerOn ? '#34d399' : '#f43f5e';
-    showToast(state.powerOn ? 'Display Power ON' : 'Display Power OFF');
+    showToast(state.powerOn ? 'Display Power ON' : 'Display Power OFF', 'info');
     sendApi('/api/power', { power: state.powerOn });
     renderMatrixCanvas();
   });
@@ -246,7 +251,7 @@ function initGlobalControls() {
     clearMatrix();
     renderMatrixCanvas();
     renderPaintCanvas();
-    showToast('Display Cleared');
+    showToast('Display Cleared', 'info');
     sendApi('/api/clear', {});
   });
 
@@ -264,24 +269,28 @@ function initGlobalControls() {
 
       renderMatrixCanvas();
       renderPaintCanvas();
-      sendImagePayload();
-      showToast('Corner test: BL=Red, BR=Green, TR=White, TL=Blue');
+      sendFramePayload();
+      showToast('Corner Test: BL=Red, BR=Green, TR=White, TL=Blue', 'success');
     });
   }
 
   btnSync.addEventListener('click', () => {
     fetch('/api/frame')
-      .then(res => res.arrayBuffer())
-      .then(buf => {
-        const bytes = new Uint8Array(buf);
-        if (bytes.length === TOTAL_LEDS * 3) {
-          state.pixels.set(bytes);
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.frame) {
+          const raw = atob(data.frame);
+          for (let i = 0; i < TOTAL_LEDS && i * 3 + 2 < raw.length; i++) {
+            state.pixels[i * 3]     = raw.charCodeAt(i * 3);
+            state.pixels[i * 3 + 1] = raw.charCodeAt(i * 3 + 1);
+            state.pixels[i * 3 + 2] = raw.charCodeAt(i * 3 + 2);
+          }
           renderMatrixCanvas();
           renderPaintCanvas();
-          showToast('Simulator Synced with Display');
+          showToast('Simulator Synced with Display', 'success');
         }
       })
-      .catch(() => showToast('Local state refreshed'));
+      .catch(() => showToast('Display sync failed', 'error'));
   });
 }
 
@@ -648,33 +657,28 @@ function initTextControls() {
   });
 }
 
-function sendTextPayload() {
-  // Attempt ultra-fast raw binary stream first (4,500 bytes)
-  fetch('/api/frame_raw', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: state.pixels.buffer,
-    signal: AbortSignal.timeout(3000)
-  })
-  .then(() => showToast('Text sent to LED Display!'))
-  .catch(() => {
-    // Fallback to JSON native renderer
-    const payload = {
-      layout: state.textLayout,
-      line1: document.getElementById('input-line1').value.trim(),
-      line2: document.getElementById('input-line2').value.trim(),
-      line3: document.getElementById('input-line3').value.trim(),
-      color1: document.getElementById('color-line1').value,
-      color2: document.getElementById('color-line2').value,
-      color3: document.getElementById('color-line3').value,
-      align: state.textAlign,
-      effect: state.textEffect,
-      speed: state.textSpeed
-    };
-    sendApi('/api/text', payload)
-      .then(() => showToast('Text sent to LED Display!'))
-      .catch(() => showToast('Simulated (Offline Mode)'));
-  });
+async function sendTextPayload() {
+  const payload = {
+    layout: state.textLayout,
+    line1: document.getElementById('input-line1').value.trim(),
+    line2: document.getElementById('input-line2').value.trim(),
+    line3: document.getElementById('input-line3').value.trim(),
+    color1: document.getElementById('color-line1').value,
+    color2: document.getElementById('color-line2').value,
+    color3: document.getElementById('color-line3').value,
+    align: state.textAlign,
+    effect: state.textEffect,
+    speed: state.textSpeed,
+    badgeIcon: document.getElementById('select-badge-icon') ? document.getElementById('select-badge-icon').value : 'check'
+  };
+
+  showToast('Sending text to matrix...', 'info');
+  const res = await sendApi('/api/text', payload);
+  if (res && res.ok) {
+    showToast('Display Updated: Text Active!', 'success');
+  } else {
+    showToast('Failed to update text', 'error');
+  }
 }
 
 // =============================================================================
@@ -709,8 +713,14 @@ function initPresetButtons() {
 
       renderTextToMatrix();
       renderMatrixCanvas();
+
+      // Card active feedback
+      presetCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+
+      // Send to physical display immediately
       sendTextPayload();
-      showToast(`Applied Preset: ${card.querySelector('h4').textContent}`);
+      showToast(`Applied Preset: ${card.querySelector('h4').textContent}`, 'success');
     });
   });
 }
@@ -869,27 +879,30 @@ function applyFloydSteinbergDither(data, w, h) {
   }
 }
 
+function uint8ToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  const chunk = 1024;
+  for (let i = 0; i < len; i += chunk) {
+    const sub = bytes.subarray(i, Math.min(i + chunk, len));
+    binary += String.fromCharCode.apply(null, sub);
+  }
+  return btoa(binary);
+}
+
+async function sendFramePayload() {
+  const b64 = uint8ToBase64(state.pixels);
+  showToast('Sending frame to LED matrix...', 'info');
+  const res = await sendApi('/api/frame', { frame: b64 });
+  if (res && res.ok) {
+    showToast('Display Updated: Frame Loaded!', 'success');
+  } else {
+    showToast('Failed to send frame', 'error');
+  }
+}
+
 function sendImagePayload() {
-  // Attempt high-speed raw binary upload (4,500 bytes)
-  fetch('/api/frame_raw', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: state.pixels.buffer,
-    signal: AbortSignal.timeout(3000)
-  })
-  .then(() => showToast('Image sent to LED Matrix!'))
-  .catch(() => {
-    // Fallback to JSON payload
-    const payload = {
-      type: 'image',
-      width: MATRIX_WIDTH,
-      height: MATRIX_HEIGHT,
-      pixels: Array.from(state.pixels)
-    };
-    sendApi('/api/image', payload)
-      .then(() => showToast('Image sent to LED Matrix!'))
-      .catch(() => showToast('Simulated (Offline Mode)'));
-  });
+  sendFramePayload();
 }
 
 // =============================================================================
@@ -1070,10 +1083,12 @@ function initAnimationCards() {
   const cards = document.querySelectorAll('.effect-card');
   cards.forEach(card => {
     card.addEventListener('click', () => {
+      cards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
       const modeId = parseInt(card.getAttribute('data-effect'));
       sendApi('/api/mode', { mode: modeId })
-        .then(() => showToast(`Animation Activated: ${card.querySelector('h4').textContent}`))
-        .catch(() => showToast('Simulated Animation Mode'));
+        .then(() => showToast(`Animation: ${card.querySelector('h4').textContent}`, 'success'))
+        .catch(() => showToast('Simulated Animation Mode', 'info'));
     });
   });
 }
