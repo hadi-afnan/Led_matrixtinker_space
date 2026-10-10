@@ -33,6 +33,12 @@
 #define DISPLAY_HEIGHT       (MATRIX_MODULES_Y * MODULE_PIXELS_Y)
 #define TOTAL_LEDS           (DISPLAY_WIDTH * DISPLAY_HEIGHT)
 
+// Data topology default:
+// 0 = Continuous row-serpentine (verified in corner test mode 1: row 0 L->R, row 1 R->L)
+// 1 = Modular 10x10 tile-serpentine (each 100-LED tile completes before next tile)
+// Can be toggled live in Web UI Settings -> Hardware and persists in flash memory.
+#define MATRIX_WIRING_MODULE_SERPENTINE  0
+
 // =============================================================================
 // PINOUT DEFINITIONS (ESP32-S3)
 // =============================================================================
@@ -59,7 +65,9 @@
 #define POWER_LIMIT_MILLIAMPS 25000 // 25 Amps (125 Watts limit for safe operation)
 
 // Frame rate throttle (FPS)
-#define TARGET_FRAME_RATE    60
+// A 1,500-pixel WS2812B frame needs about 45 ms to transmit, so 20 FPS is a
+// realistic, stable cap that leaves time for Wi-Fi and HTTP handling.
+#define TARGET_FRAME_RATE    20
 
 // =============================================================================
 // WI-FI & WEB SERVER CONFIGURATION

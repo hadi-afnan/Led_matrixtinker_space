@@ -22,19 +22,30 @@ TextRenderer::TextRenderer(DisplayMapping& display)
       _lastBlinkTime(0),
       _blinkState(true),
       _pulsePhase(0),
-      _rainbowHue(0) {}
+      _rainbowHue(0),
+      _dirty(true) {}
 
 void TextRenderer::begin() {
     _scrollOffset = DISPLAY_WIDTH;
     _lastUpdate = millis();
+    _dirty = true;
 }
 
 void TextRenderer::setText(const String& l1, const String& l2, const String& l3) {
-    _line1 = l1;
-    _line2 = l2;
-    _line3 = l3;
+    auto sanitize = [](const String& input) {
+        String output;
+        for (size_t i = 0; i < input.length() && output.length() < 48; i++) {
+            char c = input[i];
+            output += (c >= 32 && c <= 126) ? c : ' ';
+        }
+        return output;
+    };
+    _line1 = sanitize(l1);
+    _line2 = sanitize(l2);
+    _line3 = sanitize(l3);
     _scrollOffset = DISPLAY_WIDTH;
     _active = true;
+    _dirty = true;
 }
 
 void TextRenderer::setColors(CRGB c1, CRGB c2, CRGB c3) {
@@ -44,27 +55,33 @@ void TextRenderer::setColors(CRGB c1, CRGB c2, CRGB c3) {
     _color1 = c1;
     _color2 = c2;
     _color3 = c3;
+    _dirty = true;
 }
 
 void TextRenderer::setLayout(TextLayoutStyle layout) {
     _layout = layout;
     _scrollOffset = DISPLAY_WIDTH;
+    _dirty = true;
 }
 
 void TextRenderer::setEffect(TextEffectStyle effect) {
     _effect = effect;
+    _dirty = true;
 }
 
 void TextRenderer::setAlignment(const String& align) {
     _align = align;
+    _dirty = true;
 }
 
 void TextRenderer::setBadgeIcon(const String& iconName) {
     _badgeIcon = iconName;
+    _dirty = true;
 }
 
-void TextRenderer::setSpeed(uint8_t speed) {
+void TextRenderer::setSpeed(int speed) {
     _speed = constrain(speed, 10, 100);
+    _dirty = true;
 }
 
 void TextRenderer::drawLine(int y, const String& text, CRGB color, int scale, int xOffset) {
@@ -150,8 +167,10 @@ void TextRenderer::renderMarquee() {
     drawLine(11, fullMsg, _color1, 1, _scrollOffset);
 }
 
-void TextRenderer::update() {
-    if (!_active) return;
+bool TextRenderer::update() {
+    if (!_active) return false;
+
+    bool frameChanged = _dirty;
 
     // Effect Timing Handlers
     if (_effect == EFFECT_STATIC) {
@@ -162,10 +181,12 @@ void TextRenderer::update() {
         if (millis() - _lastBlinkTime > 500) {
             _lastBlinkTime = millis();
             _blinkState = !_blinkState;
+            frameChanged = true;
         }
         if (!_blinkState) {
-            _display.clear();
-            return;
+            if (frameChanged) _display.clear();
+            _dirty = false;
+            return frameChanged;
         }
         _color1 = _baseColor1;
         _color2 = _baseColor2;
@@ -176,24 +197,37 @@ void TextRenderer::update() {
         _color1 = _baseColor1; _color1.nscale8(b);
         _color2 = _baseColor2; _color2.nscale8(b);
         _color3 = _baseColor3; _color3.nscale8(b);
+        frameChanged = true;
     } else if (_effect == EFFECT_RAINBOW) {
         _rainbowHue += 2;
         _color1 = CHSV(_rainbowHue, 220, 255);
         _color2 = CHSV(_rainbowHue + 64, 220, 255);
         _color3 = CHSV(_rainbowHue + 128, 220, 255);
+        frameChanged = true;
     }
 
-    if (_effect == EFFECT_SCROLL) {
+    bool shouldScroll = (_effect == EFFECT_SCROLL) || (_layout == LAYOUT_MARQUEE);
+    if (shouldScroll) {
         unsigned long interval = 110 - _speed; // 10ms to 100ms
         if (millis() - _lastUpdate > interval) {
             _lastUpdate = millis();
             _scrollOffset--;
-            int totalTextLen = max(_line1.length(), max(_line2.length(), _line3.length()));
+            frameChanged = true;
+            int totalTextLen = 0;
+            if (_layout == LAYOUT_MARQUEE) {
+                totalTextLen = _line1.length();
+                if (_line2.length() > 0) totalTextLen += 3 + _line2.length();
+                if (_line3.length() > 0) totalTextLen += 3 + _line3.length();
+            } else {
+                totalTextLen = max(_line1.length(), max(_line2.length(), _line3.length()));
+            }
             if (_scrollOffset < -(int)(totalTextLen * 6 + 10)) {
                 _scrollOffset = DISPLAY_WIDTH;
             }
         }
     }
+
+    if (!frameChanged) return false;
 
     _display.clear();
 
@@ -203,4 +237,6 @@ void TextRenderer::update() {
         case LAYOUT_BADGE:     renderBadge(); break;
         case LAYOUT_MARQUEE:   renderMarquee(); break;
     }
+    _dirty = false;
+    return true;
 }

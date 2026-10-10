@@ -424,7 +424,7 @@
     <div id="tab-effects" class="tab-pane card">
       <div class="tab-intro">
         <h3>Matrix Visualizer Effects</h3>
-        <p>Generative 2D mathematical animations engineered to run at 60 FPS on the ESP32-S3 dual-core processor.</p>
+        <p>Generative effects tuned for stable playback on a 1,500-pixel WS2812B chain.</p>
       </div>
 
       <div class="effects-grid">
@@ -461,13 +461,23 @@
           <h4>Gradient Sweep</h4>
         </button>
         <button class="effect-card" data-effect="8">
-          <div class="effect-preview matrix-grad"></div>
-          <h4>Digital Matrix Code</h4>
+          <div class="effect-preview neon-grad"></div>
+          <h4>Scrolling Banner</h4>
+          <p>Full message ticker</p>
         </button>
         <button class="effect-card" data-effect="9">
           <div class="effect-preview checker-grad"></div>
           <h4>Checkerboard Grid</h4>
         </button>
+        <button class="effect-card" data-effect="10">
+          <div class="effect-preview matrix-grad"></div>
+          <h4>Row Scan Test</h4>
+          <p>Hardware line verification</p>
+        </button>
+        <button class="effect-card" data-effect="15"><div class="effect-preview rainbow-grad"></div><h4>Rainbow Ripple</h4><p>Expanding color waves</p></button>
+        <button class="effect-card" data-effect="16"><div class="effect-preview matrix-grad"></div><h4>Starfield Twinkle</h4><p>Soft random stars</p></button>
+        <button class="effect-card" data-effect="17"><div class="effect-preview neon-grad"></div><h4>Sinelon Sweep</h4><p>Two moving light trails</p></button>
+        <button class="effect-card" data-effect="18"><div class="effect-preview ocean-grad"></div><h4>Flowing Noise</h4><p>Organic palette flow</p></button>
       </div>
     </div>
 
@@ -481,7 +491,7 @@
       <div class="settings-sections">
         <div class="settings-card">
           <h4>Wi-Fi Connection</h4>
-          <p class="text-muted">Connect the display to your makerspace Wi-Fi network or use the built-in Access Point.</p>
+          <p class="text-muted">The local <strong>TinkerSpace-LED</strong> hotspot always stays available. Save a phone hotspot or router here to also control the display from that network.</p>
           <div class="form-group" style="margin-top: 1rem;">
             <label class="form-label" for="wifi-ssid">Network SSID</label>
             <input type="text" id="wifi-ssid" placeholder="Makerspace-WiFi" class="form-input">
@@ -491,6 +501,21 @@
             <input type="password" id="wifi-pass" placeholder="••••••••" class="form-input">
           </div>
           <button id="btn-save-wifi" class="btn btn-primary">Connect &amp; Save</button>
+          <button id="btn-forget-wifi" class="btn btn-secondary" type="button">Forget Saved Network</button>
+          <p class="text-muted" id="wifi-status" style="margin-top: .8rem;">Local hotspot: 192.168.4.1</p>
+        </div>
+
+        <div class="settings-card">
+          <h4>Matrix Wiring Topology</h4>
+          <p class="text-muted">Select how your physical display strips are wired. If text or images appear in scrambled 10&times;10 blocks, toggle between these modes.</p>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">Active Wiring Layout</label>
+            <div class="radio-pill-group" id="wiring-selector">
+              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Tiles (Mode 2)</label>
+            </div>
+          </div>
+          <button id="btn-save-wiring" class="btn btn-secondary" type="button">Apply Topology</button>
         </div>
 
         <div class="settings-card">

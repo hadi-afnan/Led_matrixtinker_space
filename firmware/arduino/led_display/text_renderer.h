@@ -26,7 +26,8 @@ public:
     TextRenderer(DisplayMapping& display);
 
     void begin();
-    void update();
+    // Returns true only when the LED frame changed and needs FastLED.show().
+    bool update();
 
     void setText(const String& l1, const String& l2, const String& l3);
     void setColors(CRGB c1, CRGB c2, CRGB c3);
@@ -34,7 +35,7 @@ public:
     void setEffect(TextEffectStyle effect);
     void setAlignment(const String& align); // "left", "center", "right"
     void setBadgeIcon(const String& iconName);
-    void setSpeed(uint8_t speed);
+    void setSpeed(int speed);
 
     bool isActive() const { return _active; }
     void setActive(bool active) { _active = active; }
@@ -66,6 +67,7 @@ private:
     bool _blinkState;
     uint8_t _pulsePhase;
     uint8_t _rainbowHue;
+    bool _dirty;
 
     void render3Line();
     void renderBigHeader();

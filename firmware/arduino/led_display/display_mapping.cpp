@@ -100,6 +100,8 @@ static const uint8_t FONT_5X7[][5] PROGMEM = {
     {0x08, 0x08, 0x2A, 0x1C, 0x08}  // 126 '~'
 };
 
+MatrixWiringType DisplayMapping::_wiringType = (MatrixWiringType)MATRIX_WIRING_MODULE_SERPENTINE;
+
 DisplayMapping::DisplayMapping(CRGB* ledArray) : _leds(ledArray) {}
 
 int DisplayMapping::getPixelIndex(int x, int y) {
@@ -108,16 +110,26 @@ int DisplayMapping::getPixelIndex(int x, int y) {
         return -1;
     }
 
-    // Left to right, bottom to top, row serpentine raster
-    // Origin (0,0) is at Bottom-Left:
-    // - Row y=0 (bottom row) runs Left -> Right  (0 -> 49)
-    // - Row y=1 (next row)   runs Right -> Left (99 -> 50)
-    // - Row y=2 (next row)   runs Left -> Right (100 -> 149)
-    // Alternating upwards to y=29
-    if ((y & 1) == 0) {
-        return (y * DISPLAY_WIDTH) + x;
+    if (_wiringType == WIRING_MODULE_SERPENTINE) {
+        // Mode 2: Chained 10x10 modular tiles (serpentine within tile and between tiles)
+        const int moduleX = x / MODULE_PIXELS_X;
+        const int moduleY = y / MODULE_PIXELS_Y;
+        const int localX = x % MODULE_PIXELS_X;
+        const int localY = y % MODULE_PIXELS_Y;
+        const int moduleIndex = (moduleY & 1)
+            ? (moduleY * MATRIX_MODULES_X) + (MATRIX_MODULES_X - 1 - moduleX)
+            : (moduleY * MATRIX_MODULES_X) + moduleX;
+        const int pixelInModule = (localY & 1)
+            ? (localY * MODULE_PIXELS_X) + (MODULE_PIXELS_X - 1 - localX)
+            : (localY * MODULE_PIXELS_X) + localX;
+        return (moduleIndex * LEDS_PER_MODULE) + pixelInModule;
     } else {
-        return (y * DISPLAY_WIDTH) + (DISPLAY_WIDTH - 1 - x);
+        // Mode 1: Continuous row-serpentine across full display width
+        if ((y & 1) == 0) {
+            return (y * DISPLAY_WIDTH) + x;
+        } else {
+            return (y * DISPLAY_WIDTH) + (DISPLAY_WIDTH - 1 - x);
+        }
     }
 }
 

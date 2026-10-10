@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <Preferences.h>
 #include <FastLED.h>
 
 #include "config.h"
@@ -39,8 +40,11 @@ private:
     CRGB* _leds;
 
     WebServer _server;
+    Preferences _preferences;
     ActiveDisplaySource _activeSource;
     bool _powerOn;
+    String _stationSsid;
+    unsigned long _lastReconnectAttempt;
 
     void registerRoutes();
     void handleRoot();
@@ -54,6 +58,8 @@ private:
     void handleApiGetFrame();
     void handleApiText();
     void handleApiWiFi();
+    void handleApiWiring();
+    void serviceWiFi();
 
     // CORS and helper utilities
     void sendJsonResponse(int code, const String& json);

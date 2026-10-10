@@ -22,6 +22,10 @@ enum DisplayMode {
     MODE_SOLID_GREEN,
     MODE_SOLID_BLUE,
     MODE_SOLID_WHITE,
+    MODE_RIPPLE,
+    MODE_TWINKLE,
+    MODE_SINELON,
+    MODE_NOISE_FLOW,
     NUM_DISPLAY_MODES
 };
 
@@ -66,6 +70,10 @@ private:
     void renderCheckerboard();
     void renderRowScan();
     void renderSolidColor(CRGB color);
+    void renderRipple();
+    void renderTwinkle();
+    void renderSinelon();
+    void renderNoiseFlow();
 };
 
 #endif // TINKERSPACE_ANIMATIONS_H

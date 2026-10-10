@@ -7,11 +7,14 @@ WebServerHandler::WebServerHandler(DisplayMapping& display, AnimationEngine& eng
       _leds(leds),
       _server(WEB_SERVER_PORT),
       _activeSource(SOURCE_ANIMATION),
-      _powerOn(true) {}
+      _powerOn(true),
+      _stationSsid(""),
+      _lastReconnectAttempt(0) {}
 
 void WebServerHandler::begin() {
     // 1. Start Wi-Fi in SoftAP + Station mode
     WiFi.mode(WIFI_AP_STA);
+    WiFi.setAutoReconnect(true);
 
     // Setup Access Point for standalone direct connection
     bool apSuccess = WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD, WIFI_AP_CHANNEL);
@@ -26,21 +29,17 @@ void WebServerHandler::begin() {
         Serial.println(F("Warning: Failed to start Wi-Fi Access Point!"));
     }
 
-    // Connect to Station if credentials supplied
-    if (String(WIFI_STA_SSID).length() > 0) {
-        Serial.print(F("Connecting to Local Wi-Fi: ")); Serial.println(WIFI_STA_SSID);
-        WiFi.begin(WIFI_STA_SSID, WIFI_STA_PASSWORD);
-        unsigned long startAttempt = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 8000) {
-            delay(250);
-            Serial.print(F("."));
-        }
-        Serial.println();
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.print(F("Station IP Address: http://")); Serial.println(WiFi.localIP());
-        } else {
-            Serial.println(F("Station connect timed out. Continuing with AP mode."));
-        }
+    // Stored credentials take precedence; compile-time credentials are useful
+    // for a first deployment. Connection is intentionally non-blocking.
+    _preferences.begin("ledmatrix", false);
+    int savedWiring = _preferences.getInt("wiring", MATRIX_WIRING_MODULE_SERPENTINE);
+    _display.setWiringType((MatrixWiringType)savedWiring);
+    _stationSsid = _preferences.getString("wifi_ssid", WIFI_STA_SSID);
+    String stationPass = _preferences.getString("wifi_pass", WIFI_STA_PASSWORD);
+    if (_stationSsid.length() > 0) {
+        Serial.print(F("Joining Wi-Fi: ")); Serial.println(_stationSsid);
+        WiFi.begin(_stationSsid.c_str(), stationPass.c_str());
+        _lastReconnectAttempt = millis();
     }
 
     // 2. Start mDNS (http://tinkerspace.local)
@@ -62,6 +61,15 @@ void WebServerHandler::begin() {
 
 void WebServerHandler::handleClient() {
     _server.handleClient();
+    serviceWiFi();
+}
+
+void WebServerHandler::serviceWiFi() {
+    if (_stationSsid.length() == 0 || WiFi.status() == WL_CONNECTED) return;
+    if (millis() - _lastReconnectAttempt < 15000) return;
+    _lastReconnectAttempt = millis();
+    String stationPass = _preferences.getString("wifi_pass", "");
+    WiFi.begin(_stationSsid.c_str(), stationPass.c_str());
 }
 
 void WebServerHandler::sendJsonResponse(int code, const String& json) {
@@ -100,6 +108,25 @@ void WebServerHandler::registerRoutes() {
     _server.on("/api/frame", HTTP_GET, [this]() { handleApiGetFrame(); });
     _server.on("/api/text", HTTP_POST, [this]() { handleApiText(); });
     _server.on("/api/wifi", HTTP_POST, [this]() { handleApiWiFi(); });
+    _server.on("/api/wiring", HTTP_POST, [this]() { handleApiWiring(); });
+
+    // Captive portal detection redirects for iOS and Android
+    _server.on("/hotspot-detect.html", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.send(302, "text/plain", "");
+    });
+    _server.on("/generate_204", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.send(302, "text/plain", "");
+    });
+    _server.on("/canonical.html", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.send(302, "text/plain", "");
+    });
+    _server.on("/connecttest.txt", HTTP_GET, [this]() {
+        _server.sendHeader("Location", "http://192.168.4.1/");
+        _server.send(302, "text/plain", "");
+    });
 }
 
 // -----------------------------------------------------------------------------
@@ -123,6 +150,9 @@ void WebServerHandler::handleApiStatus() {
     json += "\"totalLeds\":" + String(TOTAL_LEDS) + ",";
     json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\",";
     json += "\"staIP\":\"" + (WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "Disconnected") + "\",";
+    json += "\"stationSSID\":\"" + _stationSsid + "\",";
+    json += "\"stationConnected\":" + String(WiFi.status() == WL_CONNECTED ? "true" : "false") + ",";
+    json += "\"wiring\":" + String((int)_display.getWiringType()) + ",";
     json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
     json += "\"uptimeSeconds\":" + String(millis() / 1000);
     json += "}";
@@ -214,6 +244,26 @@ void WebServerHandler::handleApiFramePost() {
     }
 
     if (b64.length() > 0) {
+        const int expectedChars = ((TOTAL_LEDS * 3 + 2) / 3) * 4;
+        int encodedChars = 0;
+        for (int i = 0; i < b64.length(); i++) {
+            char c = b64.charAt(i);
+            if (c > ' ') encodedChars++;
+        }
+        if (encodedChars != expectedChars) {
+            sendJsonResponse(400, "{\"ok\":false,\"error\":\"Frame must contain exactly " + String(expectedChars) + " Base64 characters\"}");
+            return;
+        }
+        // Validate before touching the active LED buffer. A malformed upload
+        // must leave the last good image visible.
+        for (int i = 0; i < b64.length(); i++) {
+            char c = b64.charAt(i);
+            if (c > ' ' && c != '=' && b64CharToVal(c) < 0) {
+                sendJsonResponse(400, "{\"ok\":false,\"error\":\"Frame contains invalid Base64\"}");
+                return;
+            }
+        }
+
         int b64Len = b64.length();
         int pixelIdx = 0;
         int buf[4];
@@ -225,7 +275,7 @@ void WebServerHandler::handleApiFramePost() {
             char c = b64.charAt(i);
             if (c == '=' || c <= ' ') continue;
             int val = b64CharToVal(c);
-            if (val < 0) continue;
+            if (val < 0) continue; // Already validated above.
 
             buf[bufCount++] = val;
             if (bufCount == 4) {
@@ -241,6 +291,11 @@ void WebServerHandler::handleApiFramePost() {
 
                 bufCount = 0;
             }
+        }
+
+        if (pixelIdx != TOTAL_LEDS || bufCount != 0) {
+            sendJsonResponse(400, "{\"ok\":false,\"error\":\"Incomplete frame payload\"}");
+            return;
         }
 
         FastLED.show();
@@ -359,12 +414,34 @@ void WebServerHandler::handleApiWiFi() {
     String ssid = extractJsonString(body, "ssid");
     String pass = extractJsonString(body, "password");
 
+    if (body.indexOf("\"forget\":true") >= 0) {
+        _preferences.remove("wifi_ssid");
+        _preferences.remove("wifi_pass");
+        _stationSsid = "";
+        WiFi.disconnect();
+        sendJsonResponse(200, "{\"ok\":true,\"status\":\"Saved Wi-Fi network removed; local AP remains active\"}");
+        return;
+    }
+
     if (ssid.length() > 0) {
+        _preferences.putString("wifi_ssid", ssid);
+        _preferences.putString("wifi_pass", pass);
+        _stationSsid = ssid;
         WiFi.begin(ssid.c_str(), pass.c_str());
-        sendJsonResponse(200, "{\"ok\":true,\"status\":\"Connecting to " + ssid + "\"}");
+        _lastReconnectAttempt = millis();
+        sendJsonResponse(200, "{\"ok\":true,\"status\":\"Connecting; local AP remains available at 192.168.4.1\"}");
     } else {
         sendJsonResponse(400, "{\"ok\":false,\"error\":\"SSID cannot be empty\"}");
     }
+}
+
+void WebServerHandler::handleApiWiring() {
+    String body = _server.arg("plain");
+    int w = extractJsonInt(body, "wiring", 0);
+    _display.setWiringType(w == 1 ? WIRING_MODULE_SERPENTINE : WIRING_ROW_SERPENTINE);
+    _preferences.putInt("wiring", (int)_display.getWiringType());
+    FastLED.show();
+    sendJsonResponse(200, "{\"ok\":true,\"wiring\":" + String((int)_display.getWiringType()) + "}");
 }
 
 // -----------------------------------------------------------------------------
@@ -383,21 +460,48 @@ CRGB WebServerHandler::parseHexColor(const String& hex) {
 }
 
 String WebServerHandler::extractJsonString(const String& json, const String& key) {
-    String searchKey = "\"" + key + "\":\"";
+    String searchKey = "\"" + key + "\"";
     int start = json.indexOf(searchKey);
     if (start < 0) return "";
     start += searchKey.length();
-    int end = json.indexOf("\"", start);
-    if (end < 0) return "";
-    return json.substring(start, end);
+    while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == ':')) start++;
+    if (start >= json.length() || json.charAt(start) != '\"') return "";
+    start++; // skip opening quote
+
+    // Fast path: find next quote. If no backslash precedes it, use substring directly
+    int end = json.indexOf('\"', start);
+    if (end > start) {
+        int backslash = json.indexOf('\\', start);
+        if (backslash < 0 || backslash > end) {
+            return json.substring(start, end);
+        }
+    }
+
+    // Fallback path with escape handling
+    String value;
+    value.reserve(64);
+    for (int i = start; i < json.length(); i++) {
+        char c = json.charAt(i);
+        if (c == '\\' && i + 1 < json.length()) {
+            char escaped = json.charAt(++i);
+            if (escaped == 'n') value += ' ';
+            else if (escaped == 't') value += ' ';
+            else value += escaped;
+        } else if (c == '\"') {
+            return value;
+        } else {
+            value += c;
+        }
+    }
+    return "";
 }
 
 int WebServerHandler::extractJsonInt(const String& json, const String& key, int defaultVal) {
-    String searchKey = "\"" + key + "\":";
+    String searchKey = "\"" + key + "\"";
     int start = json.indexOf(searchKey);
     if (start < 0) return defaultVal;
     start += searchKey.length();
-    while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == '\"')) start++;
+    while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == ':' || json.charAt(start) == '\"')) start++;
     int end = start;
     while (end < json.length() && ((json.charAt(end) >= '0' && json.charAt(end) <= '9') || json.charAt(end) == '-')) end++;
     if (start == end) return defaultVal;

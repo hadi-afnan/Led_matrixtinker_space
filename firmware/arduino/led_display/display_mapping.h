@@ -5,12 +5,23 @@
 #include <FastLED.h>
 #include "config.h"
 
+enum MatrixWiringType {
+    WIRING_ROW_SERPENTINE = 0,    // Mode 1: Continuous row-serpentine across full width
+    WIRING_MODULE_SERPENTINE = 1  // Mode 2: Chained modular 10x10 serpentine tiles
+};
+
 /**
  * @brief Manages 2D continuous coordinate rendering over physical serpentine WS2812B modules.
  */
 class DisplayMapping {
 public:
     DisplayMapping(CRGB* ledArray);
+
+    /**
+     * @brief Configure runtime wiring topology (persisted in flash).
+     */
+    static void setWiringType(MatrixWiringType wiring) { _wiringType = wiring; }
+    static MatrixWiringType getWiringType() { return _wiringType; }
 
     /**
      * @brief Translates logical (X, Y) display coordinate into physical 1D LED index.
@@ -66,6 +77,7 @@ public:
 
 private:
     CRGB* _leds;
+    static MatrixWiringType _wiringType;
 };
 
 #endif // TINKERSPACE_DISPLAY_MAPPING_H

@@ -175,6 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initPresetButtons();
   initAnimationCards();
   initGlobalControls();
+  initWiFiControls();
+  initWiringControls();
   checkConnection();
 
   // Render initial demo space notice
@@ -213,7 +215,20 @@ function checkConnection() {
     .then(data => {
       pill.classList.remove('offline');
       pill.classList.add('online');
-      text.textContent = 'ESP32 Connected';
+      const network = data.stationConnected ? `Wi-Fi: ${data.stationSSID} (${data.staIP})` : `Local AP: ${data.apIP}`;
+      text.textContent = network;
+      const wifiStatus = document.getElementById('wifi-status');
+      if (wifiStatus) wifiStatus.textContent = data.stationConnected
+        ? `Connected to ${data.stationSSID}: http://${data.staIP} — local AP: ${data.apIP}`
+        : `Local hotspot active: ${data.apIP}. Saved network will reconnect automatically.`;
+      if (typeof data.wiring !== 'undefined') {
+        const radios = document.querySelectorAll('input[name="matrix-wiring"]');
+        radios.forEach(r => {
+          const match = parseInt(r.value) === data.wiring;
+          r.checked = match;
+          r.parentElement.classList.toggle('active', match);
+        });
+      }
     })
     .catch(() => {
       // Offline / Desktop Mock mode
@@ -291,6 +306,52 @@ function initGlobalControls() {
         }
       })
       .catch(() => showToast('Display sync failed', 'error'));
+  });
+}
+
+function initWiFiControls() {
+  const saveButton = document.getElementById('btn-save-wifi');
+  const forgetButton = document.getElementById('btn-forget-wifi');
+  if (!saveButton || !forgetButton) return;
+
+  saveButton.addEventListener('click', async () => {
+    const ssid = document.getElementById('wifi-ssid').value.trim();
+    const password = document.getElementById('wifi-pass').value;
+    if (!ssid) {
+      showToast('Enter the Wi-Fi or phone-hotspot name first', 'error');
+      return;
+    }
+    const result = await sendApi('/api/wifi', { ssid, password });
+    showToast(result && result.ok ? 'Network saved; connecting in background' : 'Could not save network', result && result.ok ? 'success' : 'error');
+  });
+
+  forgetButton.addEventListener('click', async () => {
+    const result = await sendApi('/api/wifi', { forget: true });
+    showToast(result && result.ok ? 'Saved network removed; local hotspot remains active' : 'Could not remove network', result && result.ok ? 'success' : 'error');
+  });
+}
+
+function initWiringControls() {
+  const saveBtn = document.getElementById('btn-save-wiring');
+  const radios = document.querySelectorAll('input[name="matrix-wiring"]');
+  if (!saveBtn || !radios.length) return;
+
+  radios.forEach(radio => {
+    radio.parentElement.addEventListener('click', () => {
+      radios.forEach(r => r.parentElement.classList.remove('active'));
+      radio.parentElement.classList.add('active');
+    });
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const selected = document.querySelector('input[name="matrix-wiring"]:checked');
+    const val = selected ? parseInt(selected.value) : 0;
+    const res = await sendApi('/api/wiring', { wiring: val });
+    if (res && res.ok) {
+      showToast(val === 1 ? 'Modular 10x10 tile wiring active' : 'Continuous row serpentine wiring active', 'success');
+    } else {
+      showToast('Failed to change wiring mode', 'error');
+    }
   });
 }
 
@@ -602,6 +663,11 @@ function initTextControls() {
       chip.classList.add('active');
       state.textLayout = chip.getAttribute('data-layout');
       badgeGroup.style.display = (state.textLayout === 'badge') ? 'block' : 'none';
+      if (state.textLayout === 'marquee') {
+        state.textEffect = 'scroll';
+        const effectSelect = document.getElementById('select-text-effect');
+        if (effectSelect) effectSelect.value = 'scroll';
+      }
       renderTextToMatrix();
       renderMatrixCanvas();
     });
@@ -660,9 +726,9 @@ function initTextControls() {
 async function sendTextPayload() {
   const payload = {
     layout: state.textLayout,
-    line1: document.getElementById('input-line1').value.trim(),
-    line2: document.getElementById('input-line2').value.trim(),
-    line3: document.getElementById('input-line3').value.trim(),
+    line1: document.getElementById('input-line1').value.trim().slice(0, 48),
+    line2: document.getElementById('input-line2').value.trim().slice(0, 48),
+    line3: document.getElementById('input-line3').value.trim().slice(0, 48),
     color1: document.getElementById('color-line1').value,
     color2: document.getElementById('color-line2').value,
     color3: document.getElementById('color-line3').value,
@@ -1127,7 +1193,7 @@ async function sendApi(endpoint, data) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(endpoint === '/api/frame' ? 10000 : 5000)
     });
     return await res.json();
   } catch (err) {

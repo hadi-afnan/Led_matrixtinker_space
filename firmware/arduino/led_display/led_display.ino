@@ -172,8 +172,9 @@ void loop() {
             engine.update();
             FastLED.show();
         } else if (src == SOURCE_TEXT_SIGN) {
-            textRenderer.update();
-            FastLED.show();
+            if (textRenderer.update()) {
+                FastLED.show();
+            }
         }
         // SOURCE_IMAGE_BUFFER is pushed directly when uploaded or painted
     }

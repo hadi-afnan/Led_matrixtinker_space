@@ -1548,7 +1548,7 @@ body {
     <div id="tab-effects" class="tab-pane card">
       <div class="tab-intro">
         <h3>Matrix Visualizer Effects</h3>
-        <p>Generative 2D mathematical animations engineered to run at 60 FPS on the ESP32-S3 dual-core processor.</p>
+        <p>Generative effects tuned for stable playback on a 1,500-pixel WS2812B chain.</p>
       </div>
 
       <div class="effects-grid">
@@ -1585,13 +1585,23 @@ body {
           <h4>Gradient Sweep</h4>
         </button>
         <button class="effect-card" data-effect="8">
-          <div class="effect-preview matrix-grad"></div>
-          <h4>Digital Matrix Code</h4>
+          <div class="effect-preview neon-grad"></div>
+          <h4>Scrolling Banner</h4>
+          <p>Full message ticker</p>
         </button>
         <button class="effect-card" data-effect="9">
           <div class="effect-preview checker-grad"></div>
           <h4>Checkerboard Grid</h4>
         </button>
+        <button class="effect-card" data-effect="10">
+          <div class="effect-preview matrix-grad"></div>
+          <h4>Row Scan Test</h4>
+          <p>Hardware line verification</p>
+        </button>
+        <button class="effect-card" data-effect="15"><div class="effect-preview rainbow-grad"></div><h4>Rainbow Ripple</h4><p>Expanding color waves</p></button>
+        <button class="effect-card" data-effect="16"><div class="effect-preview matrix-grad"></div><h4>Starfield Twinkle</h4><p>Soft random stars</p></button>
+        <button class="effect-card" data-effect="17"><div class="effect-preview neon-grad"></div><h4>Sinelon Sweep</h4><p>Two moving light trails</p></button>
+        <button class="effect-card" data-effect="18"><div class="effect-preview ocean-grad"></div><h4>Flowing Noise</h4><p>Organic palette flow</p></button>
       </div>
     </div>
 
@@ -1605,7 +1615,7 @@ body {
       <div class="settings-sections">
         <div class="settings-card">
           <h4>Wi-Fi Connection</h4>
-          <p class="text-muted">Connect the display to your makerspace Wi-Fi network or use the built-in Access Point.</p>
+          <p class="text-muted">The local <strong>TinkerSpace-LED</strong> hotspot always stays available. Save a phone hotspot or router here to also control the display from that network.</p>
           <div class="form-group" style="margin-top: 1rem;">
             <label class="form-label" for="wifi-ssid">Network SSID</label>
             <input type="text" id="wifi-ssid" placeholder="Makerspace-WiFi" class="form-input">
@@ -1615,6 +1625,21 @@ body {
             <input type="password" id="wifi-pass" placeholder="••••••••" class="form-input">
           </div>
           <button id="btn-save-wifi" class="btn btn-primary">Connect &amp; Save</button>
+          <button id="btn-forget-wifi" class="btn btn-secondary" type="button">Forget Saved Network</button>
+          <p class="text-muted" id="wifi-status" style="margin-top: .8rem;">Local hotspot: 192.168.4.1</p>
+        </div>
+
+        <div class="settings-card">
+          <h4>Matrix Wiring Topology</h4>
+          <p class="text-muted">Select how your physical display strips are wired. If text or images appear in scrambled 10&times;10 blocks, toggle between these modes.</p>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">Active Wiring Layout</label>
+            <div class="radio-pill-group" id="wiring-selector">
+              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Tiles (Mode 2)</label>
+            </div>
+          </div>
+          <button id="btn-save-wiring" class="btn btn-secondary" type="button">Apply Topology</button>
         </div>
 
         <div class="settings-card">
@@ -1814,6 +1839,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initPresetButtons();
   initAnimationCards();
   initGlobalControls();
+  initWiFiControls();
+  initWiringControls();
   checkConnection();
 
   // Render initial demo space notice
@@ -1852,7 +1879,20 @@ function checkConnection() {
     .then(data => {
       pill.classList.remove('offline');
       pill.classList.add('online');
-      text.textContent = 'ESP32 Connected';
+      const network = data.stationConnected ? `Wi-Fi: ${data.stationSSID} (${data.staIP})` : `Local AP: ${data.apIP}`;
+      text.textContent = network;
+      const wifiStatus = document.getElementById('wifi-status');
+      if (wifiStatus) wifiStatus.textContent = data.stationConnected
+        ? `Connected to ${data.stationSSID}: http://${data.staIP} — local AP: ${data.apIP}`
+        : `Local hotspot active: ${data.apIP}. Saved network will reconnect automatically.`;
+      if (typeof data.wiring !== 'undefined') {
+        const radios = document.querySelectorAll('input[name="matrix-wiring"]');
+        radios.forEach(r => {
+          const match = parseInt(r.value) === data.wiring;
+          r.checked = match;
+          r.parentElement.classList.toggle('active', match);
+        });
+      }
     })
     .catch(() => {
       // Offline / Desktop Mock mode
@@ -1930,6 +1970,52 @@ function initGlobalControls() {
         }
       })
       .catch(() => showToast('Display sync failed', 'error'));
+  });
+}
+
+function initWiFiControls() {
+  const saveButton = document.getElementById('btn-save-wifi');
+  const forgetButton = document.getElementById('btn-forget-wifi');
+  if (!saveButton || !forgetButton) return;
+
+  saveButton.addEventListener('click', async () => {
+    const ssid = document.getElementById('wifi-ssid').value.trim();
+    const password = document.getElementById('wifi-pass').value;
+    if (!ssid) {
+      showToast('Enter the Wi-Fi or phone-hotspot name first', 'error');
+      return;
+    }
+    const result = await sendApi('/api/wifi', { ssid, password });
+    showToast(result && result.ok ? 'Network saved; connecting in background' : 'Could not save network', result && result.ok ? 'success' : 'error');
+  });
+
+  forgetButton.addEventListener('click', async () => {
+    const result = await sendApi('/api/wifi', { forget: true });
+    showToast(result && result.ok ? 'Saved network removed; local hotspot remains active' : 'Could not remove network', result && result.ok ? 'success' : 'error');
+  });
+}
+
+function initWiringControls() {
+  const saveBtn = document.getElementById('btn-save-wiring');
+  const radios = document.querySelectorAll('input[name="matrix-wiring"]');
+  if (!saveBtn || !radios.length) return;
+
+  radios.forEach(radio => {
+    radio.parentElement.addEventListener('click', () => {
+      radios.forEach(r => r.parentElement.classList.remove('active'));
+      radio.parentElement.classList.add('active');
+    });
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const selected = document.querySelector('input[name="matrix-wiring"]:checked');
+    const val = selected ? parseInt(selected.value) : 0;
+    const res = await sendApi('/api/wiring', { wiring: val });
+    if (res && res.ok) {
+      showToast(val === 1 ? 'Modular 10x10 tile wiring active' : 'Continuous row serpentine wiring active', 'success');
+    } else {
+      showToast('Failed to change wiring mode', 'error');
+    }
   });
 }
 
@@ -2241,6 +2327,11 @@ function initTextControls() {
       chip.classList.add('active');
       state.textLayout = chip.getAttribute('data-layout');
       badgeGroup.style.display = (state.textLayout === 'badge') ? 'block' : 'none';
+      if (state.textLayout === 'marquee') {
+        state.textEffect = 'scroll';
+        const effectSelect = document.getElementById('select-text-effect');
+        if (effectSelect) effectSelect.value = 'scroll';
+      }
       renderTextToMatrix();
       renderMatrixCanvas();
     });
@@ -2299,9 +2390,9 @@ function initTextControls() {
 async function sendTextPayload() {
   const payload = {
     layout: state.textLayout,
-    line1: document.getElementById('input-line1').value.trim(),
-    line2: document.getElementById('input-line2').value.trim(),
-    line3: document.getElementById('input-line3').value.trim(),
+    line1: document.getElementById('input-line1').value.trim().slice(0, 48),
+    line2: document.getElementById('input-line2').value.trim().slice(0, 48),
+    line3: document.getElementById('input-line3').value.trim().slice(0, 48),
     color1: document.getElementById('color-line1').value,
     color2: document.getElementById('color-line2').value,
     color3: document.getElementById('color-line3').value,
@@ -2766,7 +2857,7 @@ async function sendApi(endpoint, data) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(endpoint === '/api/frame' ? 10000 : 5000)
     });
     return await res.json();
   } catch (err) {

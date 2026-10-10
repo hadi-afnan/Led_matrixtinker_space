@@ -15,7 +15,11 @@ static const char* MODE_NAMES[NUM_DISPLAY_MODES] = {
     "Solid Red Test",
     "Solid Green Test",
     "Solid Blue Test",
-    "Solid White (50% Power Test)"
+    "Solid White (50% Power Test)",
+    "Rainbow Ripple",
+    "Starfield Twinkle",
+    "Sinelon Sweep",
+    "Flowing Noise"
 };
 
 AnimationEngine::AnimationEngine(DisplayMapping& display, CRGB* leds)
@@ -101,6 +105,10 @@ void AnimationEngine::update() {
         case MODE_SOLID_GREEN:      renderSolidColor(CRGB::Green); break;
         case MODE_SOLID_BLUE:       renderSolidColor(CRGB::Blue); break;
         case MODE_SOLID_WHITE:      renderSolidColor(CRGB(128, 128, 128)); break;
+        case MODE_RIPPLE:           renderRipple(); break;
+        case MODE_TWINKLE:          renderTwinkle(); break;
+        case MODE_SINELON:          renderSinelon(); break;
+        case MODE_NOISE_FLOW:       renderNoiseFlow(); break;
         default: break;
     }
 }
@@ -290,4 +298,40 @@ void AnimationEngine::renderRowScan() {
 // -----------------------------------------------------------------------------
 void AnimationEngine::renderSolidColor(CRGB color) {
     _display.fill(color);
+}
+
+void AnimationEngine::renderRipple() {
+    const int cx = DISPLAY_WIDTH / 2;
+    const int cy = DISPLAY_HEIGHT / 2;
+    for (int x = 0; x < DISPLAY_WIDTH; x++) {
+        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+            uint8_t wave = sin8((abs(x - cx) + abs(y - cy)) * 18 - _stepCounter * 6);
+            _display.setPixel(x, y, CHSV(_hue + wave / 3, 230, wave));
+        }
+    }
+}
+
+void AnimationEngine::renderTwinkle() {
+    fadeToBlackBy(_leds, TOTAL_LEDS, 22);
+    for (uint8_t i = 0; i < 5; i++) {
+        _display.setPixel(random(DISPLAY_WIDTH), random(DISPLAY_HEIGHT),
+                          CHSV(_hue + random8(96), 100, 255));
+    }
+}
+
+void AnimationEngine::renderSinelon() {
+    fadeToBlackBy(_leds, TOTAL_LEDS, 24);
+    int x = beatsin8(13, 0, DISPLAY_WIDTH - 1);
+    int y = beatsin8(17, 0, DISPLAY_HEIGHT - 1);
+    _display.setPixel(x, y, CHSV(_hue, 255, 255));
+    _display.setPixel(DISPLAY_WIDTH - 1 - x, y, CHSV(_hue + 96, 255, 220));
+}
+
+void AnimationEngine::renderNoiseFlow() {
+    for (int x = 0; x < DISPLAY_WIDTH; x++) {
+        for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+            uint8_t noise = inoise8(x * 26, y * 26, _stepCounter * 4);
+            _display.setPixel(x, y, ColorFromPalette(PartyColors_p, noise + _hue, noise, LINEARBLEND));
+        }
+    }
 }
