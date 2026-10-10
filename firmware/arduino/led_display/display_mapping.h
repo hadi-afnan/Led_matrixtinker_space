@@ -6,8 +6,10 @@
 #include "config.h"
 
 enum MatrixWiringType {
-    WIRING_ROW_SERPENTINE = 0,    // Mode 1: Continuous row-serpentine across full width
-    WIRING_MODULE_SERPENTINE = 1  // Mode 2: Chained modular 10x10 serpentine tiles
+    WIRING_ROW_SERPENTINE = 0,       // Mode 1: Continuous row-serpentine across full width (Default)
+    WIRING_MODULE_SERPENTINE = 1,    // Mode 2: Modular 10x10 serpentine tiles (horizontal snake)
+    WIRING_MODULE_PROGRESSIVE = 2,   // Mode 3: Modular 10x10 progressive rows (left-to-right each row)
+    WIRING_COLUMN_SERPENTINE = 3     // Mode 4: Continuous column-serpentine (vertical 30-pixel columns)
 };
 
 /**
@@ -70,6 +72,16 @@ public:
      * @brief Renders a text string.
      */
     void drawString(int x, int y, const char* str, CRGB color);
+
+    /**
+     * @brief Diagnostically highlights a specific 10x10 module (0 to 14) with its index number.
+     */
+    void drawModuleHighlight(int moduleIndex, CRGB color, bool drawBorder = true, bool drawNumber = true);
+
+    /**
+     * @brief Illuminates all 10x10 module seam boundaries to verify physical grid alignment.
+     */
+    void drawModuleGrid(CRGB borderColor, CRGB dotColor);
 
     int getWidth() const { return DISPLAY_WIDTH; }
     int getHeight() const { return DISPLAY_HEIGHT; }

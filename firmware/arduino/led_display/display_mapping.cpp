@@ -110,25 +110,52 @@ int DisplayMapping::getPixelIndex(int x, int y) {
         return -1;
     }
 
-    if (_wiringType == WIRING_MODULE_SERPENTINE) {
-        // Mode 2: Chained 10x10 modular tiles (serpentine within tile and between tiles)
-        const int moduleX = x / MODULE_PIXELS_X;
-        const int moduleY = y / MODULE_PIXELS_Y;
-        const int localX = x % MODULE_PIXELS_X;
-        const int localY = y % MODULE_PIXELS_Y;
-        const int moduleIndex = (moduleY & 1)
-            ? (moduleY * MATRIX_MODULES_X) + (MATRIX_MODULES_X - 1 - moduleX)
-            : (moduleY * MATRIX_MODULES_X) + moduleX;
-        const int pixelInModule = (localY & 1)
-            ? (localY * MODULE_PIXELS_X) + (MODULE_PIXELS_X - 1 - localX)
-            : (localY * MODULE_PIXELS_X) + localX;
-        return (moduleIndex * LEDS_PER_MODULE) + pixelInModule;
-    } else {
-        // Mode 1: Continuous row-serpentine across full display width
-        if ((y & 1) == 0) {
-            return (y * DISPLAY_WIDTH) + x;
-        } else {
-            return (y * DISPLAY_WIDTH) + (DISPLAY_WIDTH - 1 - x);
+    switch (_wiringType) {
+        case WIRING_MODULE_SERPENTINE: {
+            // Mode 2: Chained 10x10 modular tiles (horizontal serpentine between tiles, serpentine inside)
+            const int moduleX = x / MODULE_PIXELS_X;
+            const int moduleY = y / MODULE_PIXELS_Y;
+            const int localX = x % MODULE_PIXELS_X;
+            const int localY = y % MODULE_PIXELS_Y;
+            const int moduleIndex = (moduleY & 1)
+                ? (moduleY * MATRIX_MODULES_X) + (MATRIX_MODULES_X - 1 - moduleX)
+                : (moduleY * MATRIX_MODULES_X) + moduleX;
+            const int pixelInModule = (localY & 1)
+                ? (localY * MODULE_PIXELS_X) + (MODULE_PIXELS_X - 1 - localX)
+                : (localY * MODULE_PIXELS_X) + localX;
+            return (moduleIndex * LEDS_PER_MODULE) + pixelInModule;
+        }
+
+        case WIRING_MODULE_PROGRESSIVE: {
+            // Mode 3: Modular 10x10 progressive rows (left-to-right each module row, serpentine inside)
+            const int moduleX = x / MODULE_PIXELS_X;
+            const int moduleY = y / MODULE_PIXELS_Y;
+            const int localX = x % MODULE_PIXELS_X;
+            const int localY = y % MODULE_PIXELS_Y;
+            const int moduleIndex = (moduleY * MATRIX_MODULES_X) + moduleX;
+            const int pixelInModule = (localY & 1)
+                ? (localY * MODULE_PIXELS_X) + (MODULE_PIXELS_X - 1 - localX)
+                : (localY * MODULE_PIXELS_X) + localX;
+            return (moduleIndex * LEDS_PER_MODULE) + pixelInModule;
+        }
+
+        case WIRING_COLUMN_SERPENTINE: {
+            // Mode 4: Continuous column-serpentine (vertical 30-pixel columns alternating up and down)
+            if ((x & 1) == 0) {
+                return (x * DISPLAY_HEIGHT) + y;
+            } else {
+                return (x * DISPLAY_HEIGHT) + (DISPLAY_HEIGHT - 1 - y);
+            }
+        }
+
+        case WIRING_ROW_SERPENTINE:
+        default: {
+            // Mode 1: Continuous row-serpentine across full display width (even rows L->R, odd rows R->L)
+            if ((y & 1) == 0) {
+                return (y * DISPLAY_WIDTH) + x;
+            } else {
+                return (y * DISPLAY_WIDTH) + (DISPLAY_WIDTH - 1 - x);
+            }
         }
     }
 }
@@ -219,5 +246,69 @@ void DisplayMapping::drawString(int x, int y, const char* str, CRGB color) {
         drawChar(cursorX, y, *str, color);
         cursorX += 6; // 5 pixels width + 1 pixel letter space
         str++;
+    }
+}
+
+void DisplayMapping::drawModuleHighlight(int moduleIndex, CRGB color, bool drawBorder, bool drawNumber) {
+    if (moduleIndex < 0 || moduleIndex >= (MATRIX_MODULES_X * MATRIX_MODULES_Y)) return;
+
+    int mx, my;
+    if (_wiringType == WIRING_MODULE_SERPENTINE) {
+        my = moduleIndex / MATRIX_MODULES_X;
+        mx = (my & 1) ? (MATRIX_MODULES_X - 1 - (moduleIndex % MATRIX_MODULES_X)) : (moduleIndex % MATRIX_MODULES_X);
+    } else {
+        my = moduleIndex / MATRIX_MODULES_X;
+        mx = moduleIndex % MATRIX_MODULES_X;
+    }
+
+    int startX = mx * MODULE_PIXELS_X;
+    int startY = my * MODULE_PIXELS_Y;
+
+    // 1. Fill entire 10x10 module body
+    for (int x = 0; x < MODULE_PIXELS_X; x++) {
+        for (int y = 0; y < MODULE_PIXELS_Y; y++) {
+            setPixel(startX + x, startY + y, color);
+        }
+    }
+
+    // 2. Optional white bounding border around module
+    if (drawBorder) {
+        drawRect(startX, startY, MODULE_PIXELS_X, MODULE_PIXELS_Y, CRGB::White, false);
+    }
+
+    // 3. Optional module index number in black/dark center
+    if (drawNumber) {
+        if (moduleIndex < 10) {
+            drawChar(startX + 3, startY + 2, '0' + moduleIndex, CRGB::Black);
+        } else {
+            drawChar(startX + 1, startY + 2, '1', CRGB::Black);
+            drawChar(startX + 5, startY + 2, '0' + (moduleIndex - 10), CRGB::Black);
+        }
+    }
+}
+
+void DisplayMapping::drawModuleGrid(CRGB borderColor, CRGB dotColor) {
+    clear();
+
+    // Draw module perimeter boundaries every 10 pixels
+    for (int x = 0; x < DISPLAY_WIDTH; x += MODULE_PIXELS_X) {
+        drawLine(x, 0, x, DISPLAY_HEIGHT - 1, borderColor);
+        drawLine(x + MODULE_PIXELS_X - 1, 0, x + MODULE_PIXELS_X - 1, DISPLAY_HEIGHT - 1, borderColor);
+    }
+    for (int y = 0; y < DISPLAY_HEIGHT; y += MODULE_PIXELS_Y) {
+        drawLine(0, y, DISPLAY_WIDTH - 1, y, borderColor);
+        drawLine(0, y + MODULE_PIXELS_Y - 1, DISPLAY_WIDTH - 1, y + MODULE_PIXELS_Y - 1, borderColor);
+    }
+
+    // Draw corner markers for each 10x10 module
+    for (int mx = 0; mx < MATRIX_MODULES_X; mx++) {
+        for (int my = 0; my < MATRIX_MODULES_Y; my++) {
+            int sx = mx * MODULE_PIXELS_X;
+            int sy = my * MODULE_PIXELS_Y;
+            setPixel(sx, sy, dotColor);
+            setPixel(sx + MODULE_PIXELS_X - 1, sy, dotColor);
+            setPixel(sx, sy + MODULE_PIXELS_Y - 1, dotColor);
+            setPixel(sx + MODULE_PIXELS_X - 1, sy + MODULE_PIXELS_Y - 1, dotColor);
+        }
     }
 }

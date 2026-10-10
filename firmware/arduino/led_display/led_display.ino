@@ -89,6 +89,32 @@ void handleSerialCommands() {
                 FastLED.setBrightness(currentBrightness);
                 Serial.print(F("Brightness: ")); Serial.println(currentBrightness);
                 break;
+            case 'r':
+            case 'R':
+                Serial.println(F("[Reset] Resetting display to Mode 0..."));
+                webHandler.setActiveSource(SOURCE_ANIMATION);
+                engine.setMode(0);
+                if (engine.isPaused()) engine.togglePause();
+                textRenderer.setActive(false);
+                display.clear();
+                FastLED.clear();
+                FastLED.show();
+                break;
+            case 'c':
+            case 'C':
+                Serial.println(F("[Clear] Clearing LED matrix..."));
+                webHandler.setActiveSource(SOURCE_IMAGE_BUFFER);
+                textRenderer.setActive(false);
+                display.clear();
+                FastLED.clear();
+                FastLED.show();
+                break;
+            case 'm':
+            case 'M':
+                Serial.println(F("[Diagnostics] Starting Module Sweep Test..."));
+                webHandler.setActiveSource(SOURCE_ANIMATION);
+                engine.setMode(MODE_MODULE_SWEEP);
+                break;
             default:
                 if (cmd >= '0' && cmd <= '9') {
                     webHandler.setActiveSource(SOURCE_ANIMATION);
@@ -144,13 +170,33 @@ void loop() {
     btnNext.update();
     btnPause.update();
 
+    // Dual-button hold (> 2.5s): Soft reboot ESP32
+    if (btnNext.isPressed() && btnPause.isPressed() &&
+        btnNext.getPressedDuration() > 2500 && btnPause.getPressedDuration() > 2500) {
+        Serial.println(F("[Hardware Reset] Dual-button hold detected -> Rebooting ESP32..."));
+        FastLED.clear();
+        FastLED.show();
+        delay(250);
+        ESP.restart();
+    }
+
+    // Long press on Pause (> 1.5s): Hardware reset display back to Mode 0
+    if (btnPause.wasLongPressed()) {
+        Serial.println(F("[Hardware Reset] Pause button held -> Resetting display to Mode 0..."));
+        webHandler.setActiveSource(SOURCE_ANIMATION);
+        engine.setMode(0);
+        if (engine.isPaused()) engine.togglePause();
+        textRenderer.setActive(false);
+        display.clear();
+        FastLED.clear();
+        FastLED.show();
+    } else if (btnPause.wasPressed()) {
+        engine.togglePause();
+    }
+
     if (btnNext.wasPressed()) {
         webHandler.setActiveSource(SOURCE_ANIMATION);
         engine.nextMode();
-    }
-
-    if (btnPause.wasPressed()) {
-        engine.togglePause();
     }
 
     // 3. Check for Serial Console Interactions

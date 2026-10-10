@@ -59,6 +59,10 @@ private:
     void handleApiText();
     void handleApiWiFi();
     void handleApiWiring();
+    void handleApiTestModule();
+    void handleApiReset();
+    void handleApiRestart();
+    void handleApiFactoryReset();
     void serviceWiFi();
 
     // CORS and helper utilities

@@ -230,6 +230,7 @@
           Send Text to Matrix
         </button>
         <button id="btn-preview-text" class="btn btn-secondary">Update Live Preview</button>
+        <button id="btn-reset-text" class="btn btn-ghost" type="button">Reset Text Defaults</button>
       </div>
     </div>
 
@@ -373,6 +374,7 @@
             </svg>
             Send Image to Display
           </button>
+          <button id="btn-reset-image" class="btn btn-ghost" type="button">Clear Loaded Image</button>
         </div>
       </div>
     </div>
@@ -478,6 +480,12 @@
         <button class="effect-card" data-effect="16"><div class="effect-preview matrix-grad"></div><h4>Starfield Twinkle</h4><p>Soft random stars</p></button>
         <button class="effect-card" data-effect="17"><div class="effect-preview neon-grad"></div><h4>Sinelon Sweep</h4><p>Two moving light trails</p></button>
         <button class="effect-card" data-effect="18"><div class="effect-preview ocean-grad"></div><h4>Flowing Noise</h4><p>Organic palette flow</p></button>
+        <button class="effect-card" data-effect="19"><div class="effect-preview rainbow-grad"></div><h4>Module Bring-Up Sweep</h4><p>Tests all 15 modules in order</p></button>
+        <button class="effect-card" data-effect="20"><div class="effect-preview matrix-grad"></div><h4>10x10 Module Grid Test</h4><p>Illuminates all module seams</p></button>
+        <button class="effect-card" data-effect="21"><div class="effect-preview neon-grad"></div><h4>Serpentine Flow Walk</h4><p>Follows exact wiring data path</p></button>
+      </div>
+      <div class="action-bar" style="margin-top: 1.25rem;">
+        <button id="btn-reset-animation" class="btn btn-secondary">Reset Animation (Rainbow Wave)</button>
       </div>
     </div>
 
@@ -507,15 +515,53 @@
 
         <div class="settings-card">
           <h4>Matrix Wiring Topology</h4>
-          <p class="text-muted">Select how your physical display strips are wired. If text or images appear in scrambled 10&times;10 blocks, toggle between these modes.</p>
+          <p class="text-muted">Select how your physical display strips and modules are wired. If text or images appear scrambled, switch between these 4 topologies.</p>
           <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Active Wiring Layout</label>
-            <div class="radio-pill-group" id="wiring-selector">
-              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1)</label>
-              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Tiles (Mode 2)</label>
+            <label class="form-label">Active Serpentine Topology</label>
+            <div class="radio-pill-group" id="wiring-selector" style="display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-start;">
+              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1 — 50-pixel rows alternating)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Serpentine Tiles (Mode 2 — Modules snake horizontally)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="2"> Modular 10&times;10 Progressive Tiles (Mode 3 — Left-to-right each row)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="3"> Continuous Column Serpentine (Mode 4 — 30-pixel columns alternating)</label>
             </div>
           </div>
           <button id="btn-save-wiring" class="btn btn-secondary" type="button">Apply Topology</button>
+        </div>
+
+        <div class="settings-card">
+          <h4>15-Module Hardware Bring-Up Diagnostics</h4>
+          <p class="text-muted">Verify every individual 10&times;10 module across your 50&times;30 matrix. Tap any module to illuminate its exact physical LEDs with its module number.</p>
+          <div class="module-test-grid" id="module-test-grid" style="display: flex; flex-direction: column; gap: 0.4rem; margin: 1rem 0;">
+            <!-- Row 2: Modules 10..14 (Top Row, y=20..29) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="10">Mod 10</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="11">Mod 11</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="12">Mod 12</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="13">Mod 13</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="14">Mod 14</button>
+            </div>
+            <!-- Row 1: Modules 9..5 (Middle Row, y=10..19) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="9">Mod 9</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="8">Mod 8</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="7">Mod 7</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="6">Mod 6</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="5">Mod 5</button>
+            </div>
+            <!-- Row 0: Modules 0..4 (Bottom Row, y=0..9) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="0">Mod 0</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="1">Mod 1</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="2">Mod 2</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="3">Mod 3</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="4">Mod 4</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-sweep-modules" class="btn btn-primary btn-sm" type="button">Auto-Sweep All 15 Modules</button>
+            <button id="btn-grid-modules" class="btn btn-secondary btn-sm" type="button">Show 10x10 Seam Grid</button>
+            <button id="btn-serpentine-walk" class="btn btn-secondary btn-sm" type="button">Walk Serpentine Flow</button>
+          </div>
         </div>
 
         <div class="settings-card">
@@ -529,6 +575,10 @@
             <li><strong>mDNS Address:</strong> <a href="http://tinkerspace.local" target="_blank" class="link">http://tinkerspace.local</a></li>
             <li><strong>AP Fallback IP:</strong> 192.168.4.1 (SSID: TinkerSpace-LED)</li>
           </ul>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+            <button id="btn-reboot-esp" class="btn btn-secondary btn-sm" type="button">Reboot ESP32 Controller</button>
+            <button id="btn-factory-reset" class="btn btn-ghost btn-sm" type="button" style="color: #f43f5e;">Factory Reset Settings</button>
+          </div>
         </div>
       </div>
     </div>

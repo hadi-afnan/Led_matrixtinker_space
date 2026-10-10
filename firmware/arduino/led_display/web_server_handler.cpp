@@ -109,6 +109,10 @@ void WebServerHandler::registerRoutes() {
     _server.on("/api/text", HTTP_POST, [this]() { handleApiText(); });
     _server.on("/api/wifi", HTTP_POST, [this]() { handleApiWiFi(); });
     _server.on("/api/wiring", HTTP_POST, [this]() { handleApiWiring(); });
+    _server.on("/api/reset", HTTP_POST, [this]() { handleApiReset(); });
+    _server.on("/api/restart", HTTP_POST, [this]() { handleApiRestart(); });
+    _server.on("/api/factory_reset", HTTP_POST, [this]() { handleApiFactoryReset(); });
+    _server.on("/api/test_module", HTTP_POST, [this]() { handleApiTestModule(); });
 
     // Captive portal detection redirects for iOS and Android
     _server.on("/hotspot-detect.html", HTTP_GET, [this]() {
@@ -185,7 +189,9 @@ void WebServerHandler::handleApiPower() {
 
 void WebServerHandler::handleApiClear() {
     _activeSource = SOURCE_IMAGE_BUFFER;
+    _textRenderer.setActive(false);
     _display.clear();
+    FastLED.clear();
     FastLED.show();
     sendJsonResponse(200, "{\"ok\":true,\"cleared\":true}");
 }
@@ -438,10 +444,73 @@ void WebServerHandler::handleApiWiFi() {
 void WebServerHandler::handleApiWiring() {
     String body = _server.arg("plain");
     int w = extractJsonInt(body, "wiring", 0);
-    _display.setWiringType(w == 1 ? WIRING_MODULE_SERPENTINE : WIRING_ROW_SERPENTINE);
+    if (w < 0 || w > 3) w = 0;
+    _display.setWiringType((MatrixWiringType)w);
     _preferences.putInt("wiring", (int)_display.getWiringType());
     FastLED.show();
     sendJsonResponse(200, "{\"ok\":true,\"wiring\":" + String((int)_display.getWiringType()) + "}");
+}
+
+void WebServerHandler::handleApiReset() {
+    _powerOn = true;
+    _activeSource = SOURCE_ANIMATION;
+    _engine.setMode(0);
+    if (_engine.isPaused()) _engine.togglePause();
+    _textRenderer.setActive(false);
+    FastLED.setBrightness(DEFAULT_BRIGHTNESS);
+    _display.clear();
+    FastLED.clear();
+    FastLED.show();
+    sendJsonResponse(200, "{\"ok\":true,\"reset\":true,\"mode\":0}");
+}
+
+void WebServerHandler::handleApiRestart() {
+    sendJsonResponse(200, "{\"ok\":true,\"status\":\"Rebooting ESP32...\"}");
+    delay(250);
+    ESP.restart();
+}
+
+void WebServerHandler::handleApiFactoryReset() {
+    _preferences.clear();
+    sendJsonResponse(200, "{\"ok\":true,\"status\":\"Preferences cleared. Rebooting...\"}");
+    delay(350);
+    ESP.restart();
+}
+
+void WebServerHandler::handleApiTestModule() {
+    String body = _server.arg("plain");
+    int mod = extractJsonInt(body, "module", -1);
+    bool isGrid = body.indexOf("\"grid\":true") >= 0;
+    bool isSweep = body.indexOf("\"sweep\":true") >= 0;
+
+    if (isSweep) {
+        _activeSource = SOURCE_ANIMATION;
+        _engine.setMode(MODE_MODULE_SWEEP);
+        sendJsonResponse(200, "{\"ok\":true,\"test\":\"module_sweep\"}");
+        return;
+    }
+
+    if (isGrid) {
+        _activeSource = SOURCE_IMAGE_BUFFER;
+        _textRenderer.setActive(false);
+        _display.drawModuleGrid(CRGB(0, 180, 255), CRGB::White);
+        FastLED.show();
+        sendJsonResponse(200, "{\"ok\":true,\"test\":\"grid\"}");
+        return;
+    }
+
+    if (mod >= 0 && mod < (MATRIX_MODULES_X * MATRIX_MODULES_Y)) {
+        _activeSource = SOURCE_IMAGE_BUFFER;
+        _textRenderer.setActive(false);
+        _display.clear();
+        CRGB testCol = CHSV((mod * 17) % 256, 240, 255);
+        _display.drawModuleHighlight(mod, testCol, true, true);
+        FastLED.show();
+        sendJsonResponse(200, "{\"ok\":true,\"module\":" + String(mod) + ",\"ledsStart\":" + String(mod * LEDS_PER_MODULE) + ",\"ledsEnd\":" + String((mod + 1) * LEDS_PER_MODULE - 1) + "}");
+        return;
+    }
+
+    sendJsonResponse(400, "{\"ok\":false,\"error\":\"Specify module (0..14), sweep, or grid\"}");
 }
 
 // -----------------------------------------------------------------------------

@@ -177,6 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initGlobalControls();
   initWiFiControls();
   initWiringControls();
+  initModuleDiagnostics();
+  initResetControls();
   checkConnection();
 
   // Render initial demo space notice
@@ -347,8 +349,14 @@ function initWiringControls() {
     const selected = document.querySelector('input[name="matrix-wiring"]:checked');
     const val = selected ? parseInt(selected.value) : 0;
     const res = await sendApi('/api/wiring', { wiring: val });
+    const names = [
+      'Continuous row serpentine wiring active',
+      'Modular 10x10 serpentine tiles active',
+      'Modular 10x10 progressive tiles active',
+      'Continuous column serpentine wiring active'
+    ];
     if (res && res.ok) {
-      showToast(val === 1 ? 'Modular 10x10 tile wiring active' : 'Continuous row serpentine wiring active', 'success');
+      showToast(names[val] || 'Wiring mode updated', 'success');
     } else {
       showToast('Failed to change wiring mode', 'error');
     }
@@ -721,6 +729,36 @@ function initTextControls() {
     renderMatrixCanvas();
     sendTextPayload();
   });
+
+  const btnResetText = document.getElementById('btn-reset-text');
+  if (btnResetText) {
+    btnResetText.addEventListener('click', () => {
+      document.getElementById('input-line1').value = 'TINKERSPACE';
+      document.getElementById('input-line2').value = 'IS OPEN';
+      document.getElementById('input-line3').value = 'COME ON IN!';
+      document.getElementById('color-line1').value = '#38bdf8';
+      document.getElementById('color-line2').value = '#34d399';
+      document.getElementById('color-line3').value = '#facc15';
+      state.textAlign = 'center';
+      document.querySelectorAll('input[name="text-align"]').forEach(r => {
+        r.checked = (r.value === 'center');
+        r.parentElement.classList.toggle('active', r.value === 'center');
+      });
+      state.textEffect = 'static';
+      document.getElementById('select-text-effect').value = 'static';
+      state.textSpeed = 40;
+      document.getElementById('input-text-speed').value = 40;
+      document.getElementById('speed-label').textContent = 'Scroll / Effect Speed: 40';
+      document.querySelectorAll('#text-layout-selector .chip').forEach(c => {
+        c.classList.toggle('active', c.getAttribute('data-layout') === '3line');
+      });
+      state.textLayout = '3line';
+      document.getElementById('badge-icon-group').style.display = 'none';
+      renderTextToMatrix();
+      renderMatrixCanvas();
+      showToast('Text form reset to defaults', 'info');
+    });
+  }
 }
 
 async function sendTextPayload() {
@@ -840,6 +878,24 @@ function initImageStudio() {
   btnUpload.addEventListener('click', () => {
     sendImagePayload();
   });
+
+  const btnResetImage = document.getElementById('btn-reset-image');
+  if (btnResetImage) {
+    btnResetImage.addEventListener('click', () => {
+      state.uploadedImage = null;
+      fileInput.value = '';
+      document.getElementById('image-brightness-adj').value = 0;
+      document.getElementById('image-contrast-adj').value = 0;
+      document.getElementById('brightness-adjust-label').textContent = 'Brightness Boost: 0';
+      document.getElementById('contrast-adjust-label').textContent = 'Contrast Boost: 0';
+      document.getElementById('check-dither').checked = true;
+      btnUpload.disabled = true;
+      clearMatrix();
+      renderMatrixCanvas();
+      renderPaintCanvas();
+      showToast('Loaded image cleared', 'info');
+    });
+  }
 }
 
 function processImageFile(file) {
@@ -1157,6 +1213,69 @@ function initAnimationCards() {
         .catch(() => showToast('Simulated Animation Mode', 'info'));
     });
   });
+
+  const btnResetAnim = document.getElementById('btn-reset-animation');
+  if (btnResetAnim) {
+    btnResetAnim.addEventListener('click', () => {
+      sendApi('/api/mode', { mode: 0 });
+      showToast('Animation reset to Rainbow Wave (Mode 0)', 'success');
+    });
+  }
+}
+
+function initModuleDiagnostics() {
+  const modButtons = document.querySelectorAll('.btn-mod-test');
+  modButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mod = parseInt(btn.getAttribute('data-mod'));
+      sendApi('/api/test_module', { module: mod });
+      showToast(`Testing Module #${mod} (x: ${(mod % 5) * 10}..${(mod % 5) * 10 + 9}, y: ${Math.floor(mod / 5) * 10}..${Math.floor(mod / 5) * 10 + 9})`, 'success');
+    });
+  });
+
+  const btnSweep = document.getElementById('btn-sweep-modules');
+  if (btnSweep) {
+    btnSweep.addEventListener('click', () => {
+      sendApi('/api/test_module', { sweep: true });
+      showToast('Running automated 15-module bring-up sweep', 'info');
+    });
+  }
+
+  const btnGrid = document.getElementById('btn-grid-modules');
+  if (btnGrid) {
+    btnGrid.addEventListener('click', () => {
+      sendApi('/api/test_module', { grid: true });
+      showToast('Displaying 10x10 module seam boundaries', 'info');
+    });
+  }
+
+  const btnSerp = document.getElementById('btn-serpentine-walk');
+  if (btnSerp) {
+    btnSerp.addEventListener('click', () => {
+      sendApi('/api/mode', { mode: 21 });
+      showToast('Tracing electrical serpentine data flow path', 'info');
+    });
+  }
+}
+
+function initResetControls() {
+  const btnReboot = document.getElementById('btn-reboot-esp');
+  if (btnReboot) {
+    btnReboot.addEventListener('click', async () => {
+      showToast('Rebooting ESP32 Controller... Reconnecting in 3s', 'info');
+      await sendApi('/api/restart', {});
+    });
+  }
+
+  const btnFactory = document.getElementById('btn-factory-reset');
+  if (btnFactory) {
+    btnFactory.addEventListener('click', async () => {
+      if (confirm('Reset all saved settings (Wi-Fi, wiring preference, brightness) to factory defaults?')) {
+        showToast('Resetting settings and rebooting...', 'error');
+        await sendApi('/api/factory_reset', {});
+      }
+    });
+  }
 }
 
 // =============================================================================

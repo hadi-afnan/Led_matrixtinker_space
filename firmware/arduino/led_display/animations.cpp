@@ -19,7 +19,10 @@ static const char* MODE_NAMES[NUM_DISPLAY_MODES] = {
     "Rainbow Ripple",
     "Starfield Twinkle",
     "Sinelon Sweep",
-    "Flowing Noise"
+    "Flowing Noise",
+    "Module Bring-Up Sweep",
+    "10x10 Module Grid Test",
+    "Serpentine Data Flow Walk"
 };
 
 AnimationEngine::AnimationEngine(DisplayMapping& display, CRGB* leds)
@@ -109,6 +112,9 @@ void AnimationEngine::update() {
         case MODE_TWINKLE:          renderTwinkle(); break;
         case MODE_SINELON:          renderSinelon(); break;
         case MODE_NOISE_FLOW:       renderNoiseFlow(); break;
+        case MODE_MODULE_SWEEP:     renderModuleSweep(); break;
+        case MODE_MODULE_GRID:      renderModuleGrid(); break;
+        case MODE_SERPENTINE_FLOW:  renderSerpentineFlow(); break;
         default: break;
     }
 }
@@ -333,5 +339,33 @@ void AnimationEngine::renderNoiseFlow() {
             uint8_t noise = inoise8(x * 26, y * 26, _stepCounter * 4);
             _display.setPixel(x, y, ColorFromPalette(PartyColors_p, noise + _hue, noise, LINEARBLEND));
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Diagnostic 1: Module-by-Module Sweep (Tests all 15 modules one-by-one)
+// -----------------------------------------------------------------------------
+void AnimationEngine::renderModuleSweep() {
+    fadeToBlackBy(_leds, TOTAL_LEDS, 50);
+    int activeMod = (_stepCounter / 15) % (MATRIX_MODULES_X * MATRIX_MODULES_Y);
+    _display.drawModuleHighlight(activeMod, CHSV(activeMod * 17, 240, 255), true, true);
+}
+
+// -----------------------------------------------------------------------------
+// Diagnostic 2: 10x10 Module Grid Alignment (Verifies all 15 module seams)
+// -----------------------------------------------------------------------------
+void AnimationEngine::renderModuleGrid() {
+    _display.drawModuleGrid(CHSV(_hue, 220, 200), CRGB::White);
+}
+
+// -----------------------------------------------------------------------------
+// Diagnostic 3: Physical Serpentine Flow Walk (Visualizes exact data path)
+// -----------------------------------------------------------------------------
+void AnimationEngine::renderSerpentineFlow() {
+    fadeToBlackBy(_leds, TOTAL_LEDS, 25);
+    int head = (_stepCounter * 3) % TOTAL_LEDS;
+    for (int i = 0; i < 4; i++) {
+        int idx = (head + i) % TOTAL_LEDS;
+        _leds[idx] = (i == 3) ? CRGB::White : CHSV(_hue + (i * 20), 220, 240);
     }
 }

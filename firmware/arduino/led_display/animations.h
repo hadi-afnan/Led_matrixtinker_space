@@ -26,6 +26,9 @@ enum DisplayMode {
     MODE_TWINKLE,
     MODE_SINELON,
     MODE_NOISE_FLOW,
+    MODE_MODULE_SWEEP,
+    MODE_MODULE_GRID,
+    MODE_SERPENTINE_FLOW,
     NUM_DISPLAY_MODES
 };
 
@@ -74,6 +77,9 @@ private:
     void renderTwinkle();
     void renderSinelon();
     void renderNoiseFlow();
+    void renderModuleSweep();
+    void renderModuleGrid();
+    void renderSerpentineFlow();
 };
 
 #endif // TINKERSPACE_ANIMATIONS_H

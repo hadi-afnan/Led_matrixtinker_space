@@ -1354,6 +1354,7 @@ body {
           Send Text to Matrix
         </button>
         <button id="btn-preview-text" class="btn btn-secondary">Update Live Preview</button>
+        <button id="btn-reset-text" class="btn btn-ghost" type="button">Reset Text Defaults</button>
       </div>
     </div>
 
@@ -1497,6 +1498,7 @@ body {
             </svg>
             Send Image to Display
           </button>
+          <button id="btn-reset-image" class="btn btn-ghost" type="button">Clear Loaded Image</button>
         </div>
       </div>
     </div>
@@ -1602,6 +1604,12 @@ body {
         <button class="effect-card" data-effect="16"><div class="effect-preview matrix-grad"></div><h4>Starfield Twinkle</h4><p>Soft random stars</p></button>
         <button class="effect-card" data-effect="17"><div class="effect-preview neon-grad"></div><h4>Sinelon Sweep</h4><p>Two moving light trails</p></button>
         <button class="effect-card" data-effect="18"><div class="effect-preview ocean-grad"></div><h4>Flowing Noise</h4><p>Organic palette flow</p></button>
+        <button class="effect-card" data-effect="19"><div class="effect-preview rainbow-grad"></div><h4>Module Bring-Up Sweep</h4><p>Tests all 15 modules in order</p></button>
+        <button class="effect-card" data-effect="20"><div class="effect-preview matrix-grad"></div><h4>10x10 Module Grid Test</h4><p>Illuminates all module seams</p></button>
+        <button class="effect-card" data-effect="21"><div class="effect-preview neon-grad"></div><h4>Serpentine Flow Walk</h4><p>Follows exact wiring data path</p></button>
+      </div>
+      <div class="action-bar" style="margin-top: 1.25rem;">
+        <button id="btn-reset-animation" class="btn btn-secondary">Reset Animation (Rainbow Wave)</button>
       </div>
     </div>
 
@@ -1631,15 +1639,53 @@ body {
 
         <div class="settings-card">
           <h4>Matrix Wiring Topology</h4>
-          <p class="text-muted">Select how your physical display strips are wired. If text or images appear in scrambled 10&times;10 blocks, toggle between these modes.</p>
+          <p class="text-muted">Select how your physical display strips and modules are wired. If text or images appear scrambled, switch between these 4 topologies.</p>
           <div class="form-group" style="margin-top: 1rem;">
-            <label class="form-label">Active Wiring Layout</label>
-            <div class="radio-pill-group" id="wiring-selector">
-              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1)</label>
-              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Tiles (Mode 2)</label>
+            <label class="form-label">Active Serpentine Topology</label>
+            <div class="radio-pill-group" id="wiring-selector" style="display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-start;">
+              <label class="radio-pill active"><input type="radio" name="matrix-wiring" value="0" checked> Continuous Row Serpentine (Mode 1 — 50-pixel rows alternating)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="1"> Modular 10&times;10 Serpentine Tiles (Mode 2 — Modules snake horizontally)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="2"> Modular 10&times;10 Progressive Tiles (Mode 3 — Left-to-right each row)</label>
+              <label class="radio-pill"><input type="radio" name="matrix-wiring" value="3"> Continuous Column Serpentine (Mode 4 — 30-pixel columns alternating)</label>
             </div>
           </div>
           <button id="btn-save-wiring" class="btn btn-secondary" type="button">Apply Topology</button>
+        </div>
+
+        <div class="settings-card">
+          <h4>15-Module Hardware Bring-Up Diagnostics</h4>
+          <p class="text-muted">Verify every individual 10&times;10 module across your 50&times;30 matrix. Tap any module to illuminate its exact physical LEDs with its module number.</p>
+          <div class="module-test-grid" id="module-test-grid" style="display: flex; flex-direction: column; gap: 0.4rem; margin: 1rem 0;">
+            <!-- Row 2: Modules 10..14 (Top Row, y=20..29) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="10">Mod 10</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="11">Mod 11</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="12">Mod 12</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="13">Mod 13</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="14">Mod 14</button>
+            </div>
+            <!-- Row 1: Modules 9..5 (Middle Row, y=10..19) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="9">Mod 9</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="8">Mod 8</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="7">Mod 7</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="6">Mod 6</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="5">Mod 5</button>
+            </div>
+            <!-- Row 0: Modules 0..4 (Bottom Row, y=0..9) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;">
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="0">Mod 0</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="1">Mod 1</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="2">Mod 2</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="3">Mod 3</button>
+              <button class="btn btn-sm btn-ghost btn-mod-test" data-mod="4">Mod 4</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-sweep-modules" class="btn btn-primary btn-sm" type="button">Auto-Sweep All 15 Modules</button>
+            <button id="btn-grid-modules" class="btn btn-secondary btn-sm" type="button">Show 10x10 Seam Grid</button>
+            <button id="btn-serpentine-walk" class="btn btn-secondary btn-sm" type="button">Walk Serpentine Flow</button>
+          </div>
         </div>
 
         <div class="settings-card">
@@ -1653,6 +1699,10 @@ body {
             <li><strong>mDNS Address:</strong> <a href="http://tinkerspace.local" target="_blank" class="link">http://tinkerspace.local</a></li>
             <li><strong>AP Fallback IP:</strong> 192.168.4.1 (SSID: TinkerSpace-LED)</li>
           </ul>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+            <button id="btn-reboot-esp" class="btn btn-secondary btn-sm" type="button">Reboot ESP32 Controller</button>
+            <button id="btn-factory-reset" class="btn btn-ghost btn-sm" type="button" style="color: #f43f5e;">Factory Reset Settings</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1841,6 +1891,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initGlobalControls();
   initWiFiControls();
   initWiringControls();
+  initModuleDiagnostics();
+  initResetControls();
   checkConnection();
 
   // Render initial demo space notice
@@ -2011,8 +2063,14 @@ function initWiringControls() {
     const selected = document.querySelector('input[name="matrix-wiring"]:checked');
     const val = selected ? parseInt(selected.value) : 0;
     const res = await sendApi('/api/wiring', { wiring: val });
+    const names = [
+      'Continuous row serpentine wiring active',
+      'Modular 10x10 serpentine tiles active',
+      'Modular 10x10 progressive tiles active',
+      'Continuous column serpentine wiring active'
+    ];
     if (res && res.ok) {
-      showToast(val === 1 ? 'Modular 10x10 tile wiring active' : 'Continuous row serpentine wiring active', 'success');
+      showToast(names[val] || 'Wiring mode updated', 'success');
     } else {
       showToast('Failed to change wiring mode', 'error');
     }
@@ -2385,6 +2443,36 @@ function initTextControls() {
     renderMatrixCanvas();
     sendTextPayload();
   });
+
+  const btnResetText = document.getElementById('btn-reset-text');
+  if (btnResetText) {
+    btnResetText.addEventListener('click', () => {
+      document.getElementById('input-line1').value = 'TINKERSPACE';
+      document.getElementById('input-line2').value = 'IS OPEN';
+      document.getElementById('input-line3').value = 'COME ON IN!';
+      document.getElementById('color-line1').value = '#38bdf8';
+      document.getElementById('color-line2').value = '#34d399';
+      document.getElementById('color-line3').value = '#facc15';
+      state.textAlign = 'center';
+      document.querySelectorAll('input[name="text-align"]').forEach(r => {
+        r.checked = (r.value === 'center');
+        r.parentElement.classList.toggle('active', r.value === 'center');
+      });
+      state.textEffect = 'static';
+      document.getElementById('select-text-effect').value = 'static';
+      state.textSpeed = 40;
+      document.getElementById('input-text-speed').value = 40;
+      document.getElementById('speed-label').textContent = 'Scroll / Effect Speed: 40';
+      document.querySelectorAll('#text-layout-selector .chip').forEach(c => {
+        c.classList.toggle('active', c.getAttribute('data-layout') === '3line');
+      });
+      state.textLayout = '3line';
+      document.getElementById('badge-icon-group').style.display = 'none';
+      renderTextToMatrix();
+      renderMatrixCanvas();
+      showToast('Text form reset to defaults', 'info');
+    });
+  }
 }
 
 async function sendTextPayload() {
@@ -2504,6 +2592,24 @@ function initImageStudio() {
   btnUpload.addEventListener('click', () => {
     sendImagePayload();
   });
+
+  const btnResetImage = document.getElementById('btn-reset-image');
+  if (btnResetImage) {
+    btnResetImage.addEventListener('click', () => {
+      state.uploadedImage = null;
+      fileInput.value = '';
+      document.getElementById('image-brightness-adj').value = 0;
+      document.getElementById('image-contrast-adj').value = 0;
+      document.getElementById('brightness-adjust-label').textContent = 'Brightness Boost: 0';
+      document.getElementById('contrast-adjust-label').textContent = 'Contrast Boost: 0';
+      document.getElementById('check-dither').checked = true;
+      btnUpload.disabled = true;
+      clearMatrix();
+      renderMatrixCanvas();
+      renderPaintCanvas();
+      showToast('Loaded image cleared', 'info');
+    });
+  }
 }
 
 function processImageFile(file) {
@@ -2821,6 +2927,69 @@ function initAnimationCards() {
         .catch(() => showToast('Simulated Animation Mode', 'info'));
     });
   });
+
+  const btnResetAnim = document.getElementById('btn-reset-animation');
+  if (btnResetAnim) {
+    btnResetAnim.addEventListener('click', () => {
+      sendApi('/api/mode', { mode: 0 });
+      showToast('Animation reset to Rainbow Wave (Mode 0)', 'success');
+    });
+  }
+}
+
+function initModuleDiagnostics() {
+  const modButtons = document.querySelectorAll('.btn-mod-test');
+  modButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mod = parseInt(btn.getAttribute('data-mod'));
+      sendApi('/api/test_module', { module: mod });
+      showToast(`Testing Module #${mod} (x: ${(mod % 5) * 10}..${(mod % 5) * 10 + 9}, y: ${Math.floor(mod / 5) * 10}..${Math.floor(mod / 5) * 10 + 9})`, 'success');
+    });
+  });
+
+  const btnSweep = document.getElementById('btn-sweep-modules');
+  if (btnSweep) {
+    btnSweep.addEventListener('click', () => {
+      sendApi('/api/test_module', { sweep: true });
+      showToast('Running automated 15-module bring-up sweep', 'info');
+    });
+  }
+
+  const btnGrid = document.getElementById('btn-grid-modules');
+  if (btnGrid) {
+    btnGrid.addEventListener('click', () => {
+      sendApi('/api/test_module', { grid: true });
+      showToast('Displaying 10x10 module seam boundaries', 'info');
+    });
+  }
+
+  const btnSerp = document.getElementById('btn-serpentine-walk');
+  if (btnSerp) {
+    btnSerp.addEventListener('click', () => {
+      sendApi('/api/mode', { mode: 21 });
+      showToast('Tracing electrical serpentine data flow path', 'info');
+    });
+  }
+}
+
+function initResetControls() {
+  const btnReboot = document.getElementById('btn-reboot-esp');
+  if (btnReboot) {
+    btnReboot.addEventListener('click', async () => {
+      showToast('Rebooting ESP32 Controller... Reconnecting in 3s', 'info');
+      await sendApi('/api/restart', {});
+    });
+  }
+
+  const btnFactory = document.getElementById('btn-factory-reset');
+  if (btnFactory) {
+    btnFactory.addEventListener('click', async () => {
+      if (confirm('Reset all saved settings (Wi-Fi, wiring preference, brightness) to factory defaults?')) {
+        showToast('Resetting settings and rebooting...', 'error');
+        await sendApi('/api/factory_reset', {});
+      }
+    });
+  }
 }
 
 // =============================================================================
