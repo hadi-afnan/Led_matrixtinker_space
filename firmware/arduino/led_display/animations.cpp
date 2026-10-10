@@ -366,6 +366,10 @@ void AnimationEngine::renderSerpentineFlow() {
     int head = (_stepCounter * 3) % TOTAL_LEDS;
     for (int i = 0; i < 4; i++) {
         int idx = (head + i) % TOTAL_LEDS;
-        _leds[idx] = (i == 3) ? CRGB::White : CHSV(_hue + (i * 20), 220, 240);
+        if (i == 3) {
+            _leds[idx] = CRGB::White;
+        } else {
+            _leds[idx] = CHSV(_hue + (i * 20), 220, 240);
+        }
     }
 }

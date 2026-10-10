@@ -8,11 +8,15 @@ This guide provides systematic troubleshooting procedures for common electrical,
 
 | Symptom | Probable Cause | Corrective Action |
 | :--- | :--- | :--- |
+| **Phone disconnects from `TinkerSpace-LED` immediately** | Phone detects no internet gateway on SoftAP and switches back to cellular data. | Tap notification *"No internet access"* and choose **"Stay connected"** / **"Keep Wi-Fi"**. Alternatively, temporarily disable **Mobile Data** on phone. |
+| **Browser cannot load `http://192.168.4.1` on phone** | Mobile browser routes HTTP queries to 4G/5G instead of local Wi-Fi interface. | Disable Cellular Data on phone or connect via laptop/tablet. Verify Wi-Fi network is `TinkerSpace-LED` with password `makeanything`. |
+| **Compilation Error: operands to '?:' have different types** | FastLED `CRGB` enum (`HTMLColorCode`) and `CHSV` ternary type mismatch. | Cast operands to `CRGB(...)` or use an `if-else` statement to allow implicit FastLED color constructors. |
+| **Compilation Error: `config.h: No such file or directory`** | Arduino IDE opened sketch from a temporary or misnamed folder. | Open `firmware/arduino/led_display/led_display.ino` directly so all 12 sibling `.h` and `.cpp` files open in tabs together. |
 | **Random flickering or white flash bursts** | Missing or faulty 3.3V to 5V level shifter; missing common ground. | Ensure 74AHCT125 is installed. Confirm common ground wire links ESP32-S3 GND and PSU negative rail. |
 | **First module works; subsequent modules are off** | Broken solder joint on `DOUT` pad of the working module or `DIN` of the next. | Inspect solder joint between modules with a magnifying glass. Re-flow joint with fresh solder. |
 | **Colors shift towards dull orange/red downstream** | Severe voltage drop across power rail (under 3.8 V). | Inspect branch fuses and wire connections. Verify parallel power injection is reaching all modules. |
 | **ESP32-S3 reboots constantly (Brownout Detector)** | Inrush current dipping the 5 V rail below 4.5 V during boot. | Install a 1,000 µF capacitor across the ESP32 5V/GND pins; ensure PSU is set to 5.05 V. |
-| **Patterns appear fragmented or zig-zagged** | Serpentine mapping mismatch in firmware. | Run `tests/led-mapping/validate_mapping.py` to verify mathematical mapping matches your physical wiring direction. |
+| **Patterns appear fragmented or zig-zagged** | Serpentine mapping mismatch in firmware. | Toggle wiring mode in Web Settings (Mode 0: row-serpentine, Mode 1: tile-serpentine) or check `validate_mapping.py`. |
 | **Buttons trigger erratic or multiple mode changes** | Contact bounce or missing internal pull-up. | Verify pins are set to `INPUT_PULLUP`. Increase debounce threshold in `buttons.cpp` from 50 ms to 80 ms. |
 | **PSU trips or makes ticking/clicking sounds** | Direct short circuit between +5 V and GND. | Immediately disconnect AC power. Check busbars and module injection points for dead shorts with a multimeter. |
 | **LEDs display visible hot spots through diffuser** | Diffuser sheet too thin or air gap too small. | Switch from 0.16 mm to 0.24 mm diffuser sheet, or increase spacer height between LEDs and diffuser by 2 mm. |

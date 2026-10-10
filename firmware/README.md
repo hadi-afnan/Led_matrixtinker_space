@@ -62,7 +62,55 @@ firmware/
 4. **Flash & Run**:
    - Click **Upload**.
    - Open Serial Monitor at **115200 baud** to view system diagnostic output.
-5. **Connect to Web App**:
-   - On your phone or PC, connect to Wi-Fi: **`TinkerSpace-LED`** (password: `makeanything`).
-   - Open your browser to: **`http://192.168.4.1`** (or `http://tinkerspace.local` on mDNS).
-   - Enjoy live multi-line space sign creation, image/logo dithering, real-time 50×30 pixel painting, and visual effects!
+5. **Connect to Web App from Phone / PC**:
+   - On your phone, tablet, or laptop, open Wi-Fi settings and select: **`TinkerSpace-LED`**
+   - Enter Password: **`makeanything`**
+   - **Android**: When prompted *"Wi-Fi has no internet access"*, tap the notification and select **"Keep Wi-Fi connection"** / **"Stay Connected"** (or temporarily toggle off mobile data so your browser doesn't route traffic to cellular).
+   - **iPhone / iOS**: The Captive Portal Assistant will pop up automatically with the TinkerSpace Web UI. If you close it, select **"Use Without Internet"**.
+   - Open your browser to: **`http://192.168.4.1`** (or `http://tinkerspace.local` on Apple/mDNS devices).
+   - Enjoy live multi-line space signs, image/logo dithering, real-time 50×30 pixel painting, animations, and hardware diagnostic controls!
+
+---
+
+## 🔘 Physical Buttons & Controls
+
+| Action | Control | Function |
+| :--- | :--- | :--- |
+| **Short Press Button 1** (GPIO 14) | Next Pattern | Advances to the next visual animation |
+| **Short Press Button 2** (GPIO 15) | Pause / Resume | Freezes or unfreezes current animation |
+| **Long Press Button 2 (> 1.5s)** | Hardware Reset | Resets display mode back to Mode 0 (Rainbow Cycle) and clears buffers |
+| **Dual Button Hold (> 2.5s)** | Soft Reboot | Reboots the ESP32-S3 microcontroller cleanly |
+
+---
+
+## ⌨️ USB Serial Console Commands (115200 Baud)
+
+When connected to a computer via USB-C, type the following single-character commands into the Arduino Serial Monitor:
+
+- `'n'` or `'N'` : Next animation mode
+- `'p'` or `'P'` : Pause / resume animation
+- `'+'` : Increase display brightness (+16)
+- `'-'` : Decrease display brightness (-16)
+- `'r'` or `'R'` : Universal display reset (resets to Mode 0)
+- `'c'` or `'C'` : Clear all LEDs to black
+- `'m'` or `'M'` : Run 15-module sweep diagnostics (illuminates each 100-LED tile sequentially)
+- `'0'`–`'9'` : Jump directly to animation mode 0 through 9
+
+---
+
+## 🌐 Embedded REST API Endpoints
+
+The ESP32-S3 provides instant HTTP JSON endpoints (CORS-enabled):
+
+- `GET  /api/status` : Current display power, brightness, active mode, IP addresses, wiring topology, free heap.
+- `POST /api/power` : Toggle display power (`{"power": true/false}`).
+- `POST /api/brightness` : Set brightness 0–255 (`{"brightness": 120}`).
+- `POST /api/mode` : Set animation preset by index (`{"index": 0}`).
+- `POST /api/text` : Display custom multi-line text (`{"line1":"...", "layout":"bigheader", "effect":"scroll", ...}`).
+- `POST /api/frame` : Push complete 50×30 RGB frame (Base64 or JSON pixel array).
+- `POST /api/wiring` : Toggle runtime wiring topology (`{"wiring": 0}` for row-serpentine, `1` for tile-serpentine).
+- `POST /api/test_module` : Run 15-module diagnostic sweep.
+- `POST /api/reset` : Reset display back to default animation mode 0.
+- `POST /api/wifi` : Save home/makerspace router credentials (`{"ssid":"...", "password":"..."}`).
+- `POST /api/restart` : Reboot ESP32-S3.
+

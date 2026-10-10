@@ -103,19 +103,25 @@ tinkerspace-led-display/
 │
 ├── firmware/                     # ESP32-S3 source code
 │   ├── arduino/
-│   │   ├── led-display/          # Production firmware with modular architecture
-│   │   │   ├── led-display.ino   # Main sketch & runtime loop
-│   │   │   ├── config.h          # Grid size, pinouts, limits, and layout toggles
+│   │   ├── led_display/          # Production firmware & embedded web app
+│   │   │   ├── led_display.ino   # Main sketch, loop, buttons & engine orchestrator
+│   │   │   ├── config.h          # Grid size, pinouts, limits, Wi-Fi credentials
 │   │   │   ├── display_mapping.h # Logical XY to serpentine 1D index conversion
 │   │   │   ├── display_mapping.cpp
-│   │   │   ├── animations.h      # Animation engine (plasma, fire, meteor, waves, etc.)
+│   │   │   ├── animations.h      # Animation engine (plasma, fire, meteor, waves, sweep)
 │   │   │   ├── animations.cpp
-│   │   │   ├── buttons.h         # Debounced tactile switch handlers
-│   │   │   └── buttons.cpp
+│   │   │   ├── buttons.h         # Debounced tactile switch handlers & reset triggers
+│   │   │   ├── buttons.cpp
+│   │   │   ├── text_renderer.h   # Multi-line sign layouts (3-line, header, badge, marquee)
+│   │   │   ├── text_renderer.cpp
+│   │   │   ├── web_server_handler.h # SoftAP, captive portal DNS, REST API server
+│   │   │   ├── web_server_handler.cpp
+│   │   │   └── web_ui.h          # Self-contained PROGMEM single-page web app
 │   │   └── examples/             # Minimal diagnostic sketches
 │   │       ├── 01_single_module_test/
 │   │       ├── 02_matrix_serpentine_test/
-│   │       └── 03_button_input_test/
+│   │       ├── 03_button_input_test/
+│   │       └── 04_corner_test/
 │   └── README.md
 │
 ├── hardware/                     # CAD, 3D printing files, and schematics
@@ -163,18 +169,24 @@ tinkerspace-led-display/
 The display can be controlled either via physical buttons or wirelessly from any smartphone, laptop, or tablet:
 
 #### 🌐 Wireless Web Controller (WLED-Style)
-1. Connect your phone or laptop to the Wi-Fi Access Point: **`TinkerSpace-LED`** (no password).
-2. Open your browser and go to **`http://192.168.4.1`** (or **`http://tinkerspace.local`**).
-3. Access all space features:
-   - **Multi-Line Space Signs**: 3-line notices, big headers, and status badges for makerspace operations.
+1. Connect your phone or laptop to the Wi-Fi Access Point: **`TinkerSpace-LED`** (password: **`makeanything`**).
+2. **Mobile Network Prompt**:
+   - **Android**: Tap the *"Wi-Fi has no internet access"* notification and choose **"Stay Connected"** (or temporarily toggle off mobile data).
+   - **iOS**: The captive portal screen will pop up automatically. If you dismiss it, select **"Use Without Internet"**.
+3. Open your browser and go to **`http://192.168.4.1`** (or **`http://tinkerspace.local`**).
+4. Access all space features:
+   - **Multi-Line Space Signs**: 3-line notices, big headers, scrolling marquees, and status badges with icons.
    - **1-Click Presets**: "SPACE IS OPEN", "WORKSHOP IN PROGRESS", "3D PRINTERS ACTIVE", "LASER CUTTER BUSY", "COFFEE BREAK".
    - **Image Studio**: Upload any image with client-side auto-crop, Floyd-Steinberg dithering, and 1-click push to display.
    - **Pixel Art Paint**: Live 50×30 drawing board with pencil, bucket fill, eraser, and color picker.
    - **Animations & Effects**: WLED-style generative animations with speed & brightness sliders.
+   - **Hardware Diagnostics**: Live toggle for row-serpentine vs. modular tile-serpentine topology, and 15-module sweep test.
 
 #### 🔘 Physical Controls
 - **Button 1 (GPIO 14)**: Cycle through animation modes (Fire, Plasma, Color Waves, Confetti, Rainbow, Meteor, etc.).
 - **Button 2 (GPIO 15)**: Pause / Resume current animation.
+- **Hold Button 2 (> 1.5s)**: Universal Reset — reverts to Mode 0 (Rainbow Cycle).
+- **Hold Both Buttons (> 2.5s)**: Clean soft reboot of the ESP32-S3.
 - **Main Power Switch**: Safely isolate 5 V DC and AC mains.
 
 ---

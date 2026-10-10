@@ -79,7 +79,7 @@ Adjust current limits to match your power wiring safety profile:
 ### Wi-Fi Configuration
 ```cpp
 #define WIFI_AP_SSID        "TinkerSpace-LED" // Access point name for direct phone connection
-#define WIFI_AP_PASSWORD    ""                // Open AP by default
+#define WIFI_AP_PASSWORD    "makeanything"    // WPA2 passphrase (min 8 chars); "" for open
 #define MDNS_HOSTNAME       "tinkerspace"     // Accessible at http://tinkerspace.local
 ```
 
@@ -96,11 +96,15 @@ Adjust current limits to match your power wiring safety profile:
 
 ## 6. Accessing the Web Application
 
-Once flashed, the ESP32-S3 automatically spins up an Access Point and web server:
+Once flashed, the ESP32-S3 automatically spins up an Access Point, a Captive Portal DNS server, and an embedded web server:
 
 ### Connecting from Phone, Tablet, or PC
-1. On your device, look for the Wi-Fi network named **`TinkerSpace-LED`** and connect (no password needed by default).
-2. Open your web browser and navigate to:
+1. On your device, look for the Wi-Fi network named **`TinkerSpace-LED`**.
+2. Enter password: **`makeanything`**.
+3. **Handle Device Network Alerts**:
+   - **Android**: A notification will state *"Wi-Fi has no internet access"*. Tap it and select **"Keep Wi-Fi Connection"** / **"Stay Connected"** (or turn off Mobile Data).
+   - **iOS / iPhone**: The captive portal login assistant will open automatically. If dismissed, tap **"Use Without Internet"**.
+4. Open your web browser and navigate to:
    ```text
    http://192.168.4.1
    ```
@@ -108,14 +112,15 @@ Once flashed, the ESP32-S3 automatically spins up an Access Point and web server
    ```text
    http://tinkerspace.local
    ```
-3. The responsive **TinkerSpace LED Web Controller** loads immediately!
+5. The responsive **TinkerSpace LED Web Controller** loads immediately!
 
 ### Key Web App Features
-- **Space Signs & Multi-Line Text**: Display 3 distinct lines of text, big headers, or status badges with custom colors, alignments, and scrolling/blinking effects.
+- **Space Signs & Multi-Line Text**: Display 3 distinct lines of text, big headers, scrolling marquees, or status badges with custom colors, alignments, and scrolling/blinking effects.
 - **Quick Space Presets**: 1-click makerspace actions ("SPACE IS OPEN", "WORKSHOP IN PROGRESS", "3D PRINTERS ACTIVE", "LASER CUTTER BUSY", "COFFEE BREAK", "PIZZA TIME").
 - **Image Studio**: Upload any image or logo; auto-downsampled and Floyd-Steinberg dithered for 50×30 pixels.
 - **Pixel Art Studio**: Draw pixel-by-pixel with pencil, eraser, and paint bucket with live sync.
-- **Animations**: Generative WLED-style patterns (Fire, Plasma, Meteor, Rainbow, Matrix Rain).
+- **Animations**: Generative WLED-style patterns (Fire, Plasma, Meteor, Rainbow, Matrix Rain, Module Sweep).
+- **Hardware Settings**: Toggle between row-serpentine and modular tile-serpentine topology, run diagnostics, and connect to local makerspace Wi-Fi.
 
 ---
 
